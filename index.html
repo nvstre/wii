@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wii Menu</title>
+<meta name="description" content="A fan-made, browser-based recreation of the Wii Menu.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font: 'M PLUS Rounded 1c', 'Nunito', 'Segoe UI', system-ui, sans-serif;
+    --pixel: 'Press Start 2P', ui-monospace, monospace;
+    --blue: #36bbe6;
+    --glow: 0 0 0 3px rgba(54, 187, 230, .35), 0 0 16px rgba(54, 187, 230, .65);
+    --stripes: repeating-linear-gradient(180deg, #f6f6f6 0 2px, #ebebeb 2px 4px);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--stripes);
+    font-family: var(--font);
+    color: #444;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  html.fake-cursor, html.fake-cursor * { cursor: none !important; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; }
+  button:focus { outline: none; }
+
+  /* ---------- stage: fixed 1280x720 canvas scaled to fit ---------- */
+  #stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 1280px; height: 720px;
+    transform: translate(-50%, -50%);
+    overflow: hidden; overflow: clip;
+    background: var(--stripes);
+  }
+  #stage::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.7), rgba(255,255,255,0) 70%);
+  }
+
+  /* ---------- channel grid ---------- */
+  #grid { position: absolute; inset: 0 0 auto 0; height: 520px; }
+  #strip { position: absolute; inset: 0; transition: transform .45s cubic-bezier(.3, .8, .3, 1); }
+  .no-anim, .no-anim * { transition: none !important; }
+  #menu #grid, #menu #bar { transition: opacity .3s, transform .45s cubic-bezier(.3, .8, .3, 1); }
+  #menu.away #grid { opacity: 0; transform: scale(1.04); pointer-events: none; }
+  #menu.away .page-arrow { opacity: 0; pointer-events: none; }
+  #menu.away #bar { transform: translateY(240px); }
+
+  .tile {
+    position: absolute; width: 256px; height: 140px;
+    border-radius: 18px; padding: 5px;
+    background: #fff;
+    border: 2px solid #c8ccd0;
+    box-shadow: 0 2px 4px rgba(0,0,0,.08);
+    transition: transform .15s ease-out, border-color .15s, box-shadow .15s;
+  }
+  .tile .art { width: 100%; height: 100%; border-radius: 12px; overflow: hidden; background: #ddd; }
+  .tile .art svg, #chArt svg, .launch-art svg { display: block; width: 100%; height: 100%; }
+  .tile.selected { z-index: 2; transform: scale(1.045); border-color: var(--blue); box-shadow: var(--glow); }
+  .tile.empty {
+    background: linear-gradient(180deg, #f1f1f1, #e2e2e2);
+    border-color: #d4d6d8;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.06);
+  }
+
+  #label {
+    position: absolute; z-index: 20; pointer-events: none;
+    height: 62px; padding: 0 44px;
+    border-radius: 31px; border: 2px solid #c6c9cc;
+    background: #fff;
+    box-shadow: 0 3px 8px rgba(0,0,0,.12);
+    font-size: 34px; font-weight: 700; line-height: 58px; color: #3c3c3c;
+    white-space: nowrap;
+    transform: translateX(-50%) scale(.85); opacity: 0;
+    transition: opacity .12s, transform .15s ease-out;
+  }
+  #label.show { opacity: 1; transform: translateX(-50%) scale(1); }
+
+  .page-arrow { position: absolute; z-index: 10; top: 250px; width: 44px; height: 64px; }
+  .page-arrow svg, .ch-arrow svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 2px 2px rgba(0,0,0,.25)); }
+  .page-arrow.prev { left: 44px; }
+  .page-arrow.next { left: 1192px; }
+  .page-arrow.prev svg, .ch-arrow.prev svg { transform: scaleX(-1); }
+  .page-arrow:hover, .page-arrow:focus-visible, .ch-arrow:hover, .ch-arrow:focus-visible { transform: scale(1.15); }
+  .page-arrow, .ch-arrow { transition: transform .12s ease-out, opacity .3s; }
+
+  /* ---------- bottom bar ---------- */
+  #bar { position: absolute; left: 0; top: 500px; width: 1280px; height: 220px; z-index: 5; }
+  #bar .shape { position: absolute; left: 0; top: 20px; width: 1280px; height: 200px; }
+  #clock {
+    position: absolute; left: 0; right: 0; top: 18px;
+    text-align: center; white-space: nowrap;
+    font-size: 70px; font-weight: 500; line-height: 1;
+    color: #b7b7b7; -webkit-text-stroke: 1.5px #8e8e8e;
+    letter-spacing: 4px; font-variant-numeric: tabular-nums;
+    text-shadow: 0 2px 0 #fff;
+  }
+  #clock .colon { display: inline-block; width: 30px; text-align: center; }
+  #clock .ampm { font-size: 28px; -webkit-text-stroke: 1px #8e8e8e; letter-spacing: 1px; margin-left: 10px; }
+  #date {
+    position: absolute; left: 0; right: 0; top: 112px;
+    text-align: center; font-size: 46px; font-weight: 700; color: #8e8e8e;
+    text-shadow: 0 2px 0 #fff;
+  }
+  .round-btn {
+    position: absolute; top: 49px; width: 112px; height: 112px; border-radius: 50%;
+    border: 3px solid #d2d6da;
+    background: radial-gradient(circle at 50% 32%, #fff 0, #f6f6f6 45%, #dcdcdc 100%);
+    box-shadow: inset 0 -5px 10px rgba(0,0,0,.07), 0 2px 5px rgba(0,0,0,.14);
+    transition: transform .15s ease-out, border-color .15s, box-shadow .15s;
+  }
+  .round-btn:hover, .round-btn:focus-visible { transform: scale(1.07); border-color: var(--blue); box-shadow: var(--glow); }
+  #wiiBtn { left: 56px; font-size: 40px; font-weight: 800; color: #a9a9a9; letter-spacing: -1px; text-shadow: 0 1px 0 #fff; }
+  #mailBtn { left: 1109px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  #mailBtn svg { width: 50px; height: 36px; }
+  #mailBtn .count { font-size: 24px; font-weight: 800; color: #9c9c9c; line-height: 1; }
+  #mailBtn.unread { animation: mailPulse 2.4s ease-in-out infinite; }
+  @keyframes mailPulse {
+    0%, 100% { border-color: #d2d6da; box-shadow: inset 0 -5px 10px rgba(0,0,0,.07), 0 2px 5px rgba(0,0,0,.14); }
+    50% { border-color: var(--blue); box-shadow: var(--glow); }
+  }
+  #sdBtn { position: absolute; left: 238px; top: 106px; width: 46px; height: 58px; transition: transform .15s ease-out; }
+  #sdBtn:hover, #sdBtn:focus-visible { transform: scale(1.12); }
+  #sdBtn svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+
+  /* ---------- channel screen ---------- */
+  #channel {
+    position: absolute; z-index: 30; overflow: hidden;
+    border-radius: 16px; background: #fff;
+    transition: left .48s cubic-bezier(.25, .8, .25, 1), top .48s cubic-bezier(.25, .8, .25, 1),
+                width .48s cubic-bezier(.25, .8, .25, 1), height .48s cubic-bezier(.25, .8, .25, 1),
+                border-radius .48s;
+  }
+  #channel.full { border-radius: 0; }
+  #chArt { position: absolute; inset: 0; }
+  #channel .ui { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  #channel.ready .ui { opacity: 1; pointer-events: auto; }
+  #channel .ui::before {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 230px;
+    background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.8));
+  }
+  #chMsg {
+    position: absolute; left: 50%; top: 452px; transform: translateX(-50%);
+    padding: 10px 40px; border-radius: 30px; background: rgba(255,255,255,.9);
+    font-size: 36px; font-weight: 700; color: #4a4a4a; white-space: nowrap;
+  }
+  .ch-buttons { position: absolute; left: 0; right: 0; bottom: 56px; display: flex; justify-content: center; gap: 140px; }
+  .ch-arrow { position: absolute; top: 300px; width: 56px; height: 82px; }
+  .ch-arrow.prev { left: 34px; }
+  .ch-arrow.next { right: 34px; }
+
+  .wii-btn {
+    min-width: 300px; height: 82px; padding: 0 36px;
+    border-radius: 24px; border: 3px solid #c3c8cd;
+    background: linear-gradient(180deg, #fff, #ebebeb);
+    box-shadow: 0 4px 10px rgba(0,0,0,.18);
+    font-size: 34px; font-weight: 700; color: #474747;
+    transition: transform .12s ease-out, border-color .12s, box-shadow .12s;
+  }
+  .wii-btn:hover:not(:disabled), .wii-btn:focus-visible { transform: scale(1.05); border-color: var(--blue); box-shadow: var(--glow), 0 4px 10px rgba(0,0,0,.18); }
+  .wii-btn:disabled { opacity: .45; }
+
+  /* ---------- launch / flash / dialog ---------- */
+  #launch {
+    position: absolute; inset: 0; z-index: 40; background: #000;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+    transition: opacity .3s;
+  }
+  #launch.leaving { opacity: 0; }
+  .launch-art { width: 576px; height: 315px; border-radius: 20px; overflow: hidden; box-shadow: 0 0 60px rgba(255,255,255,.12); }
+  #launchTitle { font-size: 44px; font-weight: 800; color: #fff; }
+  #launch .hint { font-size: 22px; color: #8e9aa6; }
+  #flash { position: absolute; inset: 0; z-index: 50; background: #fff; opacity: 0; pointer-events: none; transition: opacity .35s; }
+  #flash.on { opacity: 1; }
+
+  #dialog {
+    position: absolute; inset: 0; z-index: 45;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(230,230,230,.6); backdrop-filter: blur(3px);
+    opacity: 0; transition: opacity .2s;
+  }
+  #dialog.show { opacity: 1; }
+  #dialog .panel {
+    width: 820px; padding: 40px 56px 40px; text-align: center;
+    background: #fff; border-radius: 36px; border: 3px solid #cdd2d6;
+    box-shadow: 0 12px 40px rgba(0,0,0,.18);
+    transform: scale(.94); transition: transform .2s ease-out;
+  }
+  #dialog.show .panel { transform: none; }
+  #dlgTitle { margin: 0 0 18px; font-size: 38px; font-weight: 800; color: #3a3a3a; }
+  #dlgBody { font-size: 27px; line-height: 1.5; color: #555; }
+  #dlgButtons { margin-top: 34px; display: flex; justify-content: center; gap: 40px; }
+  .setting { display: flex; align-items: center; justify-content: space-between; margin: 18px 0; }
+  .setting > span { font-weight: 700; color: #4a4a4a; }
+  .seg { display: flex; gap: 14px; }
+  .seg button {
+    min-width: 180px; height: 62px; border-radius: 18px; border: 3px solid #c9ced3;
+    background: linear-gradient(180deg, #fff, #ececec); font-size: 26px; font-weight: 700; color: #666;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .seg button:hover, .seg button:focus-visible { box-shadow: var(--glow); }
+  .seg button.on { border-color: var(--blue); background: linear-gradient(180deg, #ecf9ff, #cbeefb); color: #1683b5; }
+
+  /* ---------- Wii Remote pointer ---------- */
+  #cursor {
+    position: fixed; left: 0; top: 0; z-index: 1000; width: 52px; height: 68px;
+    pointer-events: none; transform-origin: 0 0; opacity: 0;
+    filter: drop-shadow(2px 4px 3px rgba(0,0,0,.3));
+    transition: opacity .2s;
+  }
+  #cursor.on { opacity: 1; }
+  #cursor svg { width: 100%; height: 100%; overflow: visible; }
+
+  /* ---------- channel art animations ---------- */
+  .spin { animation: spin 7s linear infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+  .spin-slow { animation: spin 24s linear infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+  .mii-pan { animation: miiPan 40s linear infinite; }
+  .bob { animation: bob 3s ease-in-out infinite; }
+  .drift { animation: drift 9s ease-in-out infinite alternate; }
+  .ticker { animation: ticker 22s linear infinite; }
+  .dash { animation: dash .35s linear infinite; }
+  .kart-bob { animation: bob .3s ease-in-out infinite; }
+  .twinkle { animation: twinkle 1.8s ease-in-out infinite alternate; }
+  .blink { animation: blink 1.1s steps(1) infinite; }
+  .march { animation: march 2s steps(4) infinite alternate; }
+  .drop { animation: drop 3.5s steps(8) infinite; }
+  .jump { animation: jump 1.3s ease-in-out infinite; }
+  .roll { animation: roll 2.6s ease-in infinite; transform-box: fill-box; transform-origin: 50% 50%; }
+  .waddle { animation: waddle .7s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 50% 100%; }
+  .snow { animation: snow 6s linear infinite; }
+  .flicker { animation: flicker .12s steps(2) infinite alternate; transform-box: fill-box; transform-origin: 50% 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes miiPan { to { transform: translateX(-276px); } }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+  @keyframes drift { from { transform: translateX(-10px); } to { transform: translateX(18px); } }
+  @keyframes ticker { to { transform: translateX(-1100px); } }
+  @keyframes dash { to { stroke-dashoffset: -16; } }
+  @keyframes twinkle { from { opacity: .15; } to { opacity: 1; } }
+  @keyframes blink { 50% { opacity: 0; } }
+  @keyframes march { from { transform: translateX(-8px); } to { transform: translateX(8px); } }
+  @keyframes drop { from { transform: translateY(0); } to { transform: translateY(80px); } }
+  @keyframes jump { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-28px); } 60% { transform: translateY(-24px); } }
+  @keyframes roll { from { transform: translate(0, 0) scale(1); } to { transform: translate(0, -78px) scale(.4); } }
+  @keyframes waddle { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+  @keyframes snow { from { transform: translateY(-20px); } to { transform: translateY(160px); } }
+  @keyframes flicker { from { transform: scaleY(.6); } to { transform: scaleY(1.2); } }
+  @media (prefers-reduced-motion: reduce) {
+    .tile *, #chArt *, .launch-art * { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="menu">
+    <div id="grid"><div id="strip"></div></div>
+
+    <button class="page-arrow prev" id="prevPage" aria-label="Previous page" hidden><svg viewBox="0 0 44 64"><use href="#arrowShape"/></svg></button>
+    <button class="page-arrow next" id="nextPage" aria-label="Next page"><svg viewBox="0 0 44 64"><use href="#arrowShape"/></svg></button>
+    <div id="label"></div>
+
+    <div id="bar">
+      <svg class="shape" viewBox="0 0 1280 200" aria-hidden="true">
+        <defs>
+          <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="200" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#f2f2f2"/><stop offset="1" stop-color="#d3d3d3"/>
+          </linearGradient>
+          <pattern id="barLines" width="4" height="4" patternUnits="userSpaceOnUse">
+            <rect width="4" height="2" fill="#fff" opacity=".35"/>
+          </pattern>
+        </defs>
+        <path id="barPath" d="M-10 2 H330 C392 2 404 78 470 78 H810 C876 78 888 2 950 2 H1290 V210 H-10 Z" fill="url(#barFill)"/>
+        <path d="M-10 2 H330 C392 2 404 78 470 78 H810 C876 78 888 2 950 2 H1290 V210 H-10 Z" fill="url(#barLines)"/>
+        <path d="M-10 6 H330 C392 6 404 82 470 82 H810 C876 82 888 6 950 6 H1290" fill="none" stroke="#fff" stroke-width="3" opacity=".9"/>
+        <path d="M-10 2 H330 C392 2 404 78 470 78 H810 C876 78 888 2 950 2 H1290" fill="none" stroke="#36bbe6" stroke-width="9" opacity=".18"/>
+        <path d="M-10 2 H330 C392 2 404 78 470 78 H810 C876 78 888 2 950 2 H1290" fill="none" stroke="#36bbe6" stroke-width="3"/>
+        <circle cx="112" cy="85" r="64" fill="url(#barFill)" stroke="#36bbe6" stroke-width="3"/>
+        <circle cx="1165" cy="85" r="64" fill="url(#barFill)" stroke="#36bbe6" stroke-width="3"/>
+      </svg>
+      <div id="clock" aria-live="off"><span id="hh">12</span><span class="colon" id="colon">:</span><span id="mm">00</span><span class="ampm" id="ampm">PM</span></div>
+      <div id="date"></div>
+      <button class="round-btn hov" id="wiiBtn" aria-label="Settings">Wii</button>
+      <button class="hov" id="sdBtn" aria-label="SD Card Menu">
+        <svg viewBox="0 0 46 58" aria-hidden="true">
+          <path d="M4 2 H32 L44 14 V54 Q44 57 41 57 H5 Q2 57 2 54 V5 Q2 2 4 2 Z" fill="#5aa9d6" stroke="#fff" stroke-width="2.5"/>
+          <path d="M9 7 v9 M15 7 v9 M21 7 v9 M27 7 v9" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/>
+          <text x="23" y="44" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-style="italic" font-size="15" fill="#fff">SD</text>
+        </svg>
+      </button>
+      <button class="round-btn hov" id="mailBtn" aria-label="Message Board">
+        <svg viewBox="0 0 50 36" aria-hidden="true">
+          <rect x="2" y="2" width="46" height="32" rx="4" fill="#a8a8a8"/>
+          <path d="M4 5 L25 21 L46 5" fill="none" stroke="#e8e8e8" stroke-width="3" stroke-linejoin="round"/>
+        </svg>
+        <span class="count" id="mailCount">1</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="channel" hidden>
+    <div id="chArt"></div>
+    <div class="ui">
+      <div id="chMsg" hidden></div>
+      <button class="ch-arrow prev hov" id="chPrev" aria-label="Previous channel"><svg viewBox="0 0 44 64"><use href="#arrowShape"/></svg></button>
+      <button class="ch-arrow next hov" id="chNext" aria-label="Next channel"><svg viewBox="0 0 44 64"><use href="#arrowShape"/></svg></button>
+      <div class="ch-buttons">
+        <button class="wii-btn hov" id="backBtn">Wii Menu</button>
+        <button class="wii-btn hov" id="startBtn">Start</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="launch" tabindex="-1" hidden>
+    <div class="launch-art" id="launchArt"></div>
+    <div id="launchTitle"></div>
+    <div class="hint">Click or press Esc to return to the Wii Menu</div>
+  </div>
+
+  <div id="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" hidden>
+    <div class="panel">
+      <h2 id="dlgTitle"></h2>
+      <div id="dlgBody"></div>
+      <div id="dlgButtons"></div>
+    </div>
+  </div>
+
+  <div id="flash"></div>
+</div>
+
+<div id="cursor" aria-hidden="true">
+  <svg viewBox="0 0 64 84">
+    <defs>
+      <g id="hand">
+        <rect x="21" y="2" width="13" height="50" rx="6.5"/>
+        <rect x="33" y="27" width="11" height="26" rx="5.5"/>
+        <rect x="43" y="30" width="10" height="24" rx="5"/>
+        <rect x="52" y="34" width="9" height="20" rx="4.5"/>
+        <rect x="17" y="40" width="44" height="38" rx="13"/>
+        <rect x="5" y="40" width="14" height="27" rx="7" transform="rotate(-32 12 53)"/>
+      </g>
+    </defs>
+    <use href="#hand" fill="none" stroke="#2b8fd8" stroke-width="5" stroke-linejoin="round"/>
+    <use href="#hand" fill="#fff"/>
+    <path d="M33.5 41 v8 M43.5 43 v8 M52.5 45 v7" stroke="#b7d3ea" stroke-width="1.6" stroke-linecap="round"/>
+    <text x="40" y="72" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="19" fill="#2b8fd8">1</text>
+  </svg>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="arrowFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9be6ff"/><stop offset="1" stop-color="#22a3dd"/>
+    </linearGradient>
+    <path id="arrowShape" d="M9 5 Q4 2 4 8 V56 Q4 62 9 59 L39 35 Q42 32 39 29 Z" fill="url(#arrowFill)" stroke="#fff" stroke-width="3.5" stroke-linejoin="round"/>
+  </defs>
+</svg>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- layout ----------
+  const COL_X0 = 105, COL_STEP = 271, TILE_W = 256, TILE_H = 140;
+  const ROW_Y = [60, 212, 364];
+  const COLS = 4, ROWS = 3, PER_PAGE = 12, PAGES = 4, SLOTS = PAGES * PER_PAGE;
+
+  // ---------- helpers ----------
+  const $ = (s) => document.querySelector(s);
+  let uidN = 0;
+  const uid = () => `u${uidN++}_`;
+  const svg = (inner) => `<svg viewBox="0 0 256 140" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${inner}</svg>`;
+  const rng = (seed) => () => {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const pick = (r, a) => a[Math.floor(r() * a.length)];
+  const star = (cx, cy, R, r) => {
+    let d = '';
+    for (let k = 0; k < 10; k++) {
+      const a = -Math.PI / 2 + k * Math.PI / 5, rad = k % 2 ? r : R;
+      d += `${k ? 'L' : 'M'}${(cx + rad * Math.cos(a)).toFixed(1)} ${(cy + rad * Math.sin(a)).toFixed(1)}`;
+    }
+    return d + 'Z';
+  };
+  // Pixel art: rows of characters, '.' is transparent, others index into the palette.
+  const pixels = (rows, x, y, s, pal) => rows.map((row, j) => [...row].map((ch, i) =>
+    ch === '.' ? '' : `<rect x="${x + i * s}" y="${y + j * s}" width="${s}" height="${s}" fill="${pal[ch]}"/>`).join('')).join('');
+  const title = (x, y, size, text, fill, stroke, extra = '') =>
+    `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" font-weight="800" fill="${fill}" stroke="${stroke}" stroke-width="${size / 6}" paint-order="stroke" stroke-linejoin="round" ${extra}>${text}</text>`;
+
+  // ---------- channel art (all original, drawn in SVG) ----------
+  const ART = {
+    disc: (u) => svg(`
+      <defs>
+        <radialGradient id="${u}bg" cx="50%" cy="40%" r="75%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#e2e5e9"/></radialGradient>
+        <linearGradient id="${u}d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbfbfb"/><stop offset=".45" stop-color="#d3d7dc"/><stop offset=".55" stop-color="#f5f7f9"/><stop offset="1" stop-color="#c2c7cd"/></linearGradient>
+      </defs>
+      <rect width="256" height="140" fill="url(#${u}bg)"/>
+      <g class="spin">
+        <circle cx="128" cy="70" r="46" fill="url(#${u}d)" stroke="#c2c7cd" stroke-width="1.5"/>
+        <path d="M128 24 A46 46 0 0 1 174 70 L150 70 A22 22 0 0 0 128 48 Z" fill="#fff" opacity=".55"/>
+      </g>
+      <circle cx="128" cy="70" r="17" fill="#eef0f2" stroke="#c2c7cd"/>
+      <circle cx="128" cy="70" r="6" fill="#fff" stroke="#b8bec5"/>`),
+
+    mii: (u) => {
+      const r = rng(11);
+      const skins = ['#ffe0c2', '#f8cfa6', '#e6ad80', '#c08355', '#8d5a3a', '#ffd6b5'];
+      const hairs = ['#2b1d14', '#5a3a22', '#8b5a2b', '#d9a441', '#151515', '#a63c1f', '#7a7a7a'];
+      const bgs = ['#e6f4fb', '#fde8e8', '#ecf7e3', '#fff4d6', '#efe6f8', '#e3f1f7'];
+      const cols = 6, rows = 4, cell = 46;
+      const faces = Array.from({ length: cols * rows }, () => ({
+        skin: pick(r, skins), hair: pick(r, hairs), bg: pick(r, bgs),
+        long: r() < .35, glasses: r() < .2, smile: r() < .75,
+      }));
+      let out = '';
+      for (let rep = 0; rep < 2; rep++) {
+        faces.forEach((f, k) => {
+          const x = rep * cols * cell + (k % cols) * cell, y = Math.floor(k / cols) * cell - 22;
+          const cx = x + cell / 2, cy = y + cell / 2;
+          out += `<rect x="${x + 1}" y="${y + 1}" width="${cell - 2}" height="${cell - 2}" rx="6" fill="${f.bg}"/>`;
+          out += `<circle cx="${cx}" cy="${cy - 1}" r="17" fill="${f.hair}"/>`;
+          if (f.long) out += `<rect x="${cx - 17}" y="${cy - 2}" width="34" height="21" rx="8" fill="${f.hair}"/>`;
+          out += `<circle cx="${cx - 13.5}" cy="${cy + 3}" r="3" fill="${f.skin}"/><circle cx="${cx + 13.5}" cy="${cy + 3}" r="3" fill="${f.skin}"/>`;
+          out += `<ellipse cx="${cx}" cy="${cy + 3}" rx="13.5" ry="15" fill="${f.skin}"/>`;
+          out += `<path d="M${cx - 15} ${cy - 1} Q${cx - 15} ${cy - 17} ${cx} ${cy - 17} Q${cx + 15} ${cy - 17} ${cx + 15} ${cy - 1} Q${cx + 6} ${cy - 9} ${cx - 2} ${cy - 7} Q${cx - 9} ${cy - 8} ${cx - 15} ${cy - 1} Z" fill="${f.hair}"/>`;
+          out += `<path d="M${cx - 8} ${cy - 2.5} l5 -.8 M${cx + 3} ${cy - 3.3} l5 .8" stroke="${f.hair}" stroke-width="1.6" stroke-linecap="round"/>`;
+          out += `<ellipse cx="${cx - 5}" cy="${cy + 3}" rx="1.6" ry="2.4" fill="#2a2a2a"/><ellipse cx="${cx + 5}" cy="${cy + 3}" rx="1.6" ry="2.4" fill="#2a2a2a"/>`;
+          out += `<path d="M${cx} ${cy + 5} q1.4 2 0 2.8" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1"/>`;
+          out += f.smile
+            ? `<path d="M${cx - 4} ${cy + 11} Q${cx} ${cy + 14.5} ${cx + 4} ${cy + 11}" fill="none" stroke="#b5473a" stroke-width="1.5" stroke-linecap="round"/>`
+            : `<path d="M${cx - 3.5} ${cy + 12} H${cx + 3.5}" stroke="#b5473a" stroke-width="1.5" stroke-linecap="round"/>`;
+          if (f.glasses) out += `<g fill="none" stroke="#333" stroke-width="1.1"><rect x="${cx - 9.5}" y="${cy - .5}" width="7.5" height="6.5" rx="2"/><rect x="${cx + 2}" y="${cy - .5}" width="7.5" height="6.5" rx="2"/><path d="M${cx - 2} ${cy + 2} H${cx + 2}"/></g>`;
+        });
+      }
+      return svg(`<rect width="256" height="140" fill="#f5f1e8"/><g class="mii-pan">${out}</g>`);
+    },
+
+    photo: (u) => {
+      const polaroid = (x, y, rot, delay, scene) => `
+        <g transform="translate(${x} ${y}) rotate(${rot})"><g class="bob" style="animation-delay:${delay}s">
+          <rect x="-34" y="-31" width="68" height="62" rx="2" fill="#fff" stroke="#cfd8de"/>
+          <rect x="-29" y="-26" width="58" height="43" fill="url(#${u}sky)"/>${scene}
+        </g></g>`;
+      return svg(`
+        <defs>
+          <linearGradient id="${u}bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8f8ff"/><stop offset="1" stop-color="#b6e2f5"/></linearGradient>
+          <linearGradient id="${u}sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ccfff"/><stop offset="1" stop-color="#e0f5ff"/></linearGradient>
+        </defs>
+        <rect width="256" height="140" fill="url(#${u}bg)"/>
+        ${polaroid(64, 60, -9, 0, `<circle cx="14" cy="-15" r="6" fill="#ffd84a"/><path d="M-29 17 V2 Q-14 -10 0 2 T29 -2 V17 Z" fill="#5cc25a"/>`)}
+        ${polaroid(192, 62, -4, 1, `<rect x="-29" y="6" width="58" height="11" fill="#6bc46a"/><path d="M0 12 V-4" stroke="#3c9a3c" stroke-width="2"/><g fill="#ff7eb3"><circle cx="0" cy="-12" r="4"/><circle cx="-6" cy="-7" r="4"/><circle cx="6" cy="-7" r="4"/><circle cx="-4" cy="-1" r="4"/><circle cx="4" cy="-1" r="4"/></g><circle cx="0" cy="-6" r="3.5" fill="#ffd23f"/>`)}
+        ${polaroid(128, 54, 5, .5, `<rect x="-29" y="0" width="58" height="17" fill="#2f8fdd"/><path d="M-2 0 l0 -18 l12 18 z" fill="#fff"/><path d="M-14 0 h26 l-4 5 h-18 z" fill="#c0582f"/>`)}
+        ${title(128, 129, 15, 'Photo Channel', '#2c95cf', '#fff')}`);
+    },
+
+    shop: (u) => svg(`
+      <defs>
+        <linearGradient id="${u}bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d9f1fc"/></linearGradient>
+        <linearGradient id="${u}bag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#55cbf3"/><stop offset="1" stop-color="#1a8ccd"/></linearGradient>
+      </defs>
+      <rect width="256" height="140" fill="url(#${u}bg)"/>
+      <g fill="#bfe8f8">${[[30, 30], [220, 40], [46, 100], [210, 104]].map(([x, y]) => `<path d="${star(x, y, 8, 3.5)}"/>`).join('')}</g>
+      <g class="bob">
+        <path d="M112 44 v-6 a16 16 0 0 1 32 0 v6" fill="none" stroke="#1a8ccd" stroke-width="5" stroke-linecap="round"/>
+        <path d="M98 42 h60 l7 56 a6 6 0 0 1 -6 7 h-62 a6 6 0 0 1 -6 -7 z" fill="url(#${u}bag)"/>
+        <circle cx="112" cy="48" r="3" fill="#fff"/><circle cx="144" cy="48" r="3" fill="#fff"/>
+        <path d="${star(128, 74, 15, 6.5)}" fill="#fff" opacity=".95"/>
+      </g>
+      ${title(128, 129, 15, 'Shop Channel', '#1a8ccd', '#fff')}`),
+
+    forecast: (u) => svg(`
+      <defs>
+        <linearGradient id="${u}sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fa9ea"/><stop offset="1" stop-color="#c6ebfb"/></linearGradient>
+        <radialGradient id="${u}globe" cx="40%" cy="20%" r="80%"><stop offset="0" stop-color="#78d0ff"/><stop offset="1" stop-color="#1b62b8"/></radialGradient>
+        <clipPath id="${u}clip"><circle cx="128" cy="210" r="120"/></clipPath>
+      </defs>
+      <rect width="256" height="140" fill="url(#${u}sky)"/>
+      <g class="spin-slow"><path d="M200 12 V2 M200 64 V74 M174 38 H164 M226 38 H236 M181.6 19.6 L174.5 12.5 M218.4 56.4 L225.5 63.5 M218.4 19.6 L225.5 12.5 M181.6 56.4 L174.5 63.5" stroke="#ffe27a" stroke-width="4" stroke-linecap="round"/></g>
+      <circle cx="200" cy="38" r="15" fill="#ffd23f" stroke="#ffb300" stroke-width="2"/>
+      <g class="drift" fill="#fff"><circle cx="52" cy="44" r="12"/><circle cx="68" cy="37" r="16"/><circle cx="85" cy="45" r="11"/><rect x="40" y="44" width="56" height="12" rx="6"/></g>
+      <circle cx="128" cy="210" r="120" fill="url(#${u}globe)"/>
+      <g clip-path="url(#${u}clip)" fill="#5cc25a">
+        <path d="M30 120 q18 -26 50 -20 q22 5 32 -6 q16 -14 36 -4 q-6 20 -32 24 q-32 6 -52 16 z"/>
+        <path d="M168 104 q16 -12 34 -2 q14 8 26 30 q-24 6 -40 -6 q-14 -10 -20 -22 z"/>
+      </g>
+      ${title(128, 132, 15, 'Forecast Channel', '#fff', '#1b62b8')}`),
+
+    news: (u) => svg(`
+      <defs><linearGradient id="${u}bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a3263"/><stop offset="1" stop-color="#1f7bc6"/></linearGradient></defs>
+      <rect width="256" height="140" fill="url(#${u}bg)"/>
+      <g fill="none" stroke="#8fd3ff" stroke-width="1.6" opacity=".9">
+        <circle cx="58" cy="54" r="36"/><ellipse cx="58" cy="54" rx="36" ry="12"/><path d="M22 54 H94 M58 18 V90"/>
+        <ellipse cx="58" cy="54" rx="14" ry="36"><animate attributeName="rx" values="36;2;36" dur="5s" repeatCount="indefinite"/></ellipse>
+      </g>
+      <text x="108" y="64" font-size="44" font-weight="800" font-style="italic" fill="#fff">NEWS</text>
+      <text x="111" y="86" font-size="15" font-weight="700" fill="#bfe6ff">Channel</text>
+      <rect y="104" width="256" height="26" fill="#fff" opacity=".93"/>
+      <g class="ticker"><text x="256" y="122" font-size="13" font-weight="800" fill="#0a3263">HEADLINES  •  Sunny skies expected all weekend  •  Local bakery wins regional bread contest  •  Record crowds at the summer bowling finals  •  New trail opens in the river park</text></g>`),
+
+    internet: (u) => svg(`
+      <defs>
+        <linearGradient id="${u}bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#e2effa"/></linearGradient>
+        <radialGradient id="${u}g" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#8fdcff"/><stop offset="1" stop-color="#1570c4"/></radialGradient>
+      </defs>
+      <rect width="256" height="140" fill="url(#${u}bg)"/>
+      <circle cx="128" cy="58" r="34" fill="url(#${u}g)"/>
+      <g fill="none" stroke="#fff" stroke-width="1.4" opacity=".55"><ellipse cx="128" cy="58" rx="34" ry="11"/><ellipse cx="128" cy="58" rx="13" ry="34"/><path d="M94 58 H162"/></g>
+      <g transform="rotate(-18 128 58)">
+        <ellipse cx="128" cy="58" rx="60" ry="16" fill="none" stroke="#3cc0f0" stroke-width="3"/>
+        <circle r="5.5" fill="#ffbf1f"><animateMotion dur="3s" repeatCount="indefinite" path="M68 58 a60 16 0 1 0 120 0 a60 16 0 1 0 -120 0"/></circle>
+      </g>
+      ${title(128, 128, 15, 'Internet Channel', '#4b5d70', '#fff')}`),
+
+    kart: (u) => svg(`
+      <defs>
+        <linearGradient id="${u}sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7a38"/><stop offset=".7" stop-color="#ffc95a"/><stop offset="1" stop-color="#ffe6a6"/></linearGradient>
+        <linearGradient id="${u}t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff36b"/><stop offset="1" stop-color="#ff8a1f"/></linearGradient>
+      </defs>
+      <rect width="256" height="140" fill="url(#${u}sky)"/>
+      <circle cx="128" cy="72" r="24" fill="#fff3b0" opacity=".9"/>
+      <path d="M0 74 Q40 52 80 68 T160 64 T256 70 V80 H0 Z" fill="#b45b7a"/>
+      <rect y="74" width="256" height="66" fill="#4caf50"/>
+      <path d="M0 140 L110 74 H146 L256 140 Z" fill="#4a4a55"/>
+      <path d="M0 140 L110 74 M256 140 L146 74" stroke="#fff" stroke-width="3"/>
+      <path class="dash" d="M128 140 V74" stroke="#ffd84a" stroke-width="3" stroke-dasharray="8 8"/>
+      <g class="kart-bob">
+        <rect x="104" y="118" width="10" height="12" rx="3" fill="#222"/><rect x="142" y="118" width="10" height="12" rx="3" fill="#222"/>
+        <rect x="110" y="110" width="36" height="16" rx="5" fill="#e62e2e"/>
+        <circle cx="128" cy="106" r="7" fill="#fff" stroke="#333" stroke-width="1.5"/>
+      </g>
+      ${title(122, 40, 31, 'TURBO KART', `url(#${u}t)`, '#5a1a00', 'font-style="italic"')}
+      <rect x="182" y="45" width="32" height="17" rx="4" fill="#e62e2e" stroke="#5a1a00" stroke-width="2"/>
+      <text x="198" y="58.5" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">GP</text>`),
+
+    stars: (u) => {
+      const r = rng(5);
+      let stars = '';
+      for (let k = 0; k < 46; k++) {
+        stars += `<circle class="twinkle" style="animation-delay:${(r() * 2).toFixed(2)}s" cx="${(r() * 256).toFixed(1)}" cy="${(r() * 140).toFixed(1)}" r="${(.5 + r() * .9).toFixed(2)}" fill="#fff"/>`;
+      }
+      const alien = ['...xxxxx...', '.xxxxxxxxx.', 'xx.xx.xx.xx', 'xxxxxxxxxxx', '..x..x..x..', '.x.x...x.x.'];
+      const aliens = [0, 1, 2, 3].map((k) => pixels(alien, 60 + k * 36, 54, 2, { x: ['#ff5ad1', '#7cff6b', '#ffd23f', '#5ad1ff'][k] })).join('');
+      return svg(`
+        <rect width="256" height="140" fill="#05051a"/>${stars}
+        <g class="march">${aliens}</g>
+        <path d="M128 90 l11 20 h-22 z" fill="#4ad9ff"/><rect x="124" y="104" width="8" height="5" fill="#2a8fc0"/>
+        <path class="flicker" d="M123 110 h10 l-5 8 z" fill="#ff7a1a"/>
+        <text x="130" y="35" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="15" fill="#e2382b">STAR BLASTER</text>
+        <text x="128" y="33" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="15" fill="#ffe14a">STAR BLASTER</text>
+        <text class="blink" x="128" y="131" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="7" fill="#fff">PUSH START</text>`);
+    },
+
+    blocks: () => {
+      const colors = { r: '#ff4d6d', o: '#ff9f1c', y: '#ffd60a', g: '#3ddc84', c: '#2ec4ff', b: '#4361ee', p: '#b15cff' };
+      const stack = ['........', '........', 'c.......', 'cc....yy', 'cgg..yyo', 'pggrr.oo', 'ppbrrboo', 'pbbbbcgg'];
+      const word = (text, y) => `<text x="44" y="${y}" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="13">${[...text].map((ch, k) => `<tspan fill="${Object.values(colors)[k % 7]}">${ch}</tspan>`).join('')}</text>`;
+      return svg(`
+        <rect width="256" height="140" fill="#24123f"/>
+        <rect x="88" y="-2" width="80" height="144" fill="#150828" stroke="#6a44ad" stroke-width="2"/>
+        <g opacity=".12" stroke="#fff">${Array.from({ length: 7 }, (_, k) => `<path d="M${98 + k * 10} 0 V140"/>`).join('')}</g>
+        ${pixels(stack, 88, 60, 10, colors)}
+        <g class="drop">${pixels(['.p.', 'ppp'], 108, -12, 10, colors)}</g>
+        ${word('BLOCK', 58)}${word('DROP', 82)}
+        <text x="212" y="34" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="8" fill="#c9b8ff">NEXT</text>
+        <rect x="190" y="40" width="44" height="34" rx="4" fill="#150828" stroke="#6a44ad" stroke-width="2"/>
+        ${pixels(['.gg', 'gg.'], 200, 48, 8, colors)}
+        <text x="212" y="98" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="8" fill="#c9b8ff">SCORE</text>
+        <text x="212" y="114" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="8" fill="#fff">004210</text>`);
+    },
+
+    knight: () => {
+      const hero = ['..gggg..', '.gggggg.', '.gddddg.', '.gggggg.', '..yyyy..', '.bbbbbbw', 'bbbbbbbw', 'bbbbbb.w', '.bb..bb.', '.dd..dd.'];
+      const pal = { g: '#cfd6dd', d: '#262636', b: '#2f6fe0', y: '#ffbf1f', w: '#f4f4f4' };
+      const bricks = Array.from({ length: 16 }, (_, k) => `<path d="M${k * 16} 118 V126 M${k * 16 + 8} 126 V140" stroke="#8a4a1c" stroke-width="1.5"/>`).join('');
+      return svg(`
+        <rect width="256" height="140" fill="#5ec2ff"/>
+        <g class="drift" fill="#fff"><rect x="24" y="44" width="40" height="10"/><rect x="32" y="36" width="20" height="10"/><rect x="186" y="54" width="44" height="10"/><rect x="196" y="46" width="22" height="10"/></g>
+        <rect y="110" width="256" height="30" fill="#c8742c"/><rect y="110" width="256" height="6" fill="#3fbf3f"/>
+        <path d="M0 126 H256" stroke="#8a4a1c" stroke-width="1.5"/>${bricks}
+        <rect x="150" y="62" width="16" height="16" fill="#ffbf1f" stroke="#8a4a00" stroke-width="2"/>
+        <text x="158" y="75" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="9" fill="#8a4a00">?</text>
+        <ellipse cx="158" cy="50" rx="5" ry="7" fill="#ffd23f" stroke="#c78a00" stroke-width="1.5"><animate attributeName="rx" values="5;1;5" dur="1s" repeatCount="indefinite"/></ellipse>
+        <g class="jump">${pixels(hero, 64, 80, 3, pal)}</g>
+        <text x="130" y="31" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="15" fill="#1a1a5a">PIXEL KNIGHT</text>
+        <text x="128" y="29" text-anchor="middle" font-family="'Press Start 2P', monospace" font-size="15" fill="#fff">PIXEL KNIGHT</text>`);
+    },
+
+    bowling: (u) => {
+      const pin = (x, y) => `<g transform="translate(${x} ${y})"><ellipse rx="3.4" ry="6.5" fill="#fff" stroke="#bbb" stroke-width=".6"/><rect x="-3.2" y="-3" width="6.4" height="1.6" fill="#e62e2e"/></g>`;
+      const pins = [[128, 38], [122, 42], [134, 42], [116, 46], [128, 46], [140, 46], [110, 50], [122, 50], [134, 50], [146, 50]];
+      return svg(`
+        <defs>
+          <linearGradient id="${u}lane" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8954a"/><stop offset="1" stop-color="#f3c886"/></linearGradient>
+          <radialGradient id="${u}ball" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#8f9bff"/><stop offset="1" stop-color="#1b2b9a"/></radialGradient>
+        </defs>
+        <rect width="256" height="140" fill="#1b1033"/>
+        <g fill="#ff4fa3">${[30, 60, 90].map((y) => `<circle cx="24" cy="${y}" r="3" class="twinkle"/><circle cx="232" cy="${y}" r="3" class="twinkle" style="animation-delay:.9s"/>`).join('')}</g>
+        <path d="M60 140 L104 32 H152 L196 140 Z" fill="#3a2a4a"/>
+        <path d="M72 140 L108 32 H148 L184 140 Z" fill="url(#${u}lane)"/>
+        <path d="M100 140 L118 32 M128 140 V32 M156 140 L138 32" stroke="#c07a35" stroke-width=".8" opacity=".6"/>
+        ${pins.slice().reverse().map(([x, y]) => pin(x, y)).join('')}
+        <circle class="roll" cx="128" cy="128" r="9" fill="url(#${u}ball)"/>
+        ${title(128, 24, 21, 'STRIKE LANES', '#ff4fa3', '#2b0b3f', 'font-style="italic"')}`);
+    },
+
+    penguin: (u) => {
+      const peng = (x, y, s, d) => `<g transform="translate(${x} ${y}) scale(${s})"><g class="waddle" style="animation-delay:${d}s">
+        <ellipse cx="-11" cy="0" rx="3.5" ry="8" fill="#1f2a3a" transform="rotate(18 -11 0)"/><ellipse cx="11" cy="0" rx="3.5" ry="8" fill="#1f2a3a" transform="rotate(-18 11 0)"/>
+        <ellipse cy="0" rx="10" ry="14" fill="#1f2a3a"/><ellipse cy="3" rx="6.5" ry="10" fill="#fff"/>
+        <circle cx="-3" cy="-7" r="2.2" fill="#fff"/><circle cx="3" cy="-7" r="2.2" fill="#fff"/><circle cx="-2.6" cy="-7" r="1" fill="#000"/><circle cx="3.4" cy="-7" r="1" fill="#000"/>
+        <path d="M-2.5 -4 h5 l-2.5 3 z" fill="#ff9b1f"/>
+        <ellipse cx="-4" cy="14" rx="3.5" ry="1.6" fill="#ff9b1f"/><ellipse cx="4" cy="14" rx="3.5" ry="1.6" fill="#ff9b1f"/>
+      </g></g>`;
+      const r = rng(3);
+      const flakes = Array.from({ length: 22 }, () => `<circle class="snow" style="animation-delay:-${(r() * 6).toFixed(2)}s" cx="${(r() * 256).toFixed(1)}" cy="0" r="${(1 + r() * 1.4).toFixed(1)}" fill="#fff"/>`).join('');
+      return svg(`
+        <defs><linearGradient id="${u}bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fdcff"/><stop offset="1" stop-color="#e9f7ff"/></linearGradient></defs>
+        <rect width="256" height="140" fill="url(#${u}bg)"/>
+        <path d="M150 96 L178 52 L204 96 Z" fill="#d6efff" stroke="#a9d6f2" stroke-width="1.5"/>
+        <path d="M0 100 Q60 80 128 94 T256 88 V140 H0 Z" fill="#fff"/>
+        <path d="M0 116 Q70 104 150 118 T256 112 V140 H0 Z" fill="#eaf6ff"/>
+        ${peng(52, 104, 1.2, 0)}${peng(92, 112, 1, .3)}${peng(206, 108, 1.1, .15)}${peng(170, 120, .9, .45)}
+        ${flakes}
+        ${title(128, 38, 26, 'Penguin Plaza', '#1e88d6', '#fff')}`);
+    },
+  };
+
+  const CHANNELS = [
+    { name: 'Disc Channel', art: 'disc', noStart: 'Please insert a disc.' },
+    { name: 'Mii Channel', art: 'mii' },
+    { name: 'Photo Channel', art: 'photo' },
+    { name: 'Shop Channel', art: 'shop' },
+    { name: 'Forecast Channel', art: 'forecast' },
+    { name: 'News Channel', art: 'news' },
+    { name: 'Internet Channel', art: 'internet' },
+    { name: 'Turbo Kart GP', art: 'kart' },
+    { name: 'Star Blaster', art: 'stars' },
+    { name: 'Block Drop', art: 'blocks' },
+    { name: 'Pixel Knight', art: 'knight' },
+    { name: 'Strike Lanes', art: 'bowling' },
+    { name: 'Penguin Plaza', art: 'penguin' },
+  ];
+  const renderArt = (i) => ART[CHANNELS[i].art](uid());
+
+  // ---------- settings ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('wiimenu.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('wiimenu.' + k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
+  };
+  const settings = { sound: store.get('sound', true), clock24: store.get('clock24', false) };
+  let unread = !store.get('mailRead', false);
+
+  // ---------- sound (synthesized, no audio files) ----------
+  const sfx = {
+    ctx: null,
+    unlock() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!this.ctx && AC) this.ctx = new AC();
+      if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    },
+    tone(freq, dur, { type = 'sine', gain = .05, delay = 0, to } = {}) {
+      if (!settings.sound || !this.ctx) return;
+      const t = this.ctx.currentTime + delay;
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+      g.gain.setValueAtTime(.0001, t);
+      g.gain.exponentialRampToValueAtTime(gain, t + .008);
+      g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      o.connect(g).connect(this.ctx.destination);
+      o.start(t);
+      o.stop(t + dur + .02);
+    },
+    hover() { this.tone(2093, .05, { gain: .025, type: 'triangle' }); },
+    click() { this.tone(1046, .07); this.tone(1568, .1, { gain: .04, delay: .05 }); },
+    page() { this.tone(520, .18, { gain: .04, to: 980, type: 'triangle' }); },
+    open() { [784, 988, 1175, 1568].forEach((f, k) => this.tone(f, .16, { gain: .04, delay: k * .045 })); },
+    back() { [1175, 880, 659].forEach((f, k) => this.tone(f, .14, { gain: .04, delay: k * .05 })); },
+    start() { [523, 659, 784, 1046].forEach((f, k) => this.tone(f, .35, { gain: .05, delay: k * .07, type: 'triangle' })); },
+  };
+  ['pointerdown', 'keydown'].forEach((ev) => addEventListener(ev, () => sfx.unlock(), { capture: true }));
+
+  // ---------- elements ----------
+  const stage = $('#stage'), menu = $('#menu'), grid = $('#grid'), strip = $('#strip'), label = $('#label');
+  const prevBtn = $('#prevPage'), nextBtn = $('#nextPage');
+  const channel = $('#channel'), chArt = $('#chArt'), chMsg = $('#chMsg'), chPrev = $('#chPrev'), chNext = $('#chNext');
+  const backBtn = $('#backBtn'), startBtn = $('#startBtn');
+  const launch = $('#launch'), launchArt = $('#launchArt'), launchTitle = $('#launchTitle'), flash = $('#flash');
+  const dialog = $('#dialog'), dlgTitle = $('#dlgTitle'), dlgBody = $('#dlgBody'), dlgButtons = $('#dlgButtons');
+  const cursor = $('#cursor');
+
+  let scale = 1;
+  function fit() {
+    scale = Math.min(innerWidth / 1280, innerHeight / 720);
+    stage.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+  addEventListener('resize', fit);
+  fit();
+  // Focus can scroll overflow containers even when clipped; keep them pinned.
+  [stage, grid].forEach((el) => el.addEventListener('scroll', () => { el.scrollLeft = 0; el.scrollTop = 0; }));
+
+  // ---------- state ----------
+  let mode = 'menu';          // menu | channel | closing | launch | dialog
+  let page = 0, selected = -1, current = -1, labelTimer = 0;
+  let lastInput = 'pointer', openedByKey = false, swiped = false;
+
+  function slotPos(i) {
+    const p = Math.floor(i / PER_PAGE), k = i % PER_PAGE, row = Math.floor(k / COLS), col = k % COLS;
+    return { page: p, row, col, left: COL_X0 + (p * COLS + col) * COL_STEP, top: ROW_Y[row] };
+  }
+  const screenPos = (i) => { const s = slotPos(i); return { left: s.left - page * COLS * COL_STEP, top: s.top }; };
+  const px = (left, top, width, height) => ({ left: left + 'px', top: top + 'px', width: width + 'px', height: height + 'px' });
+
+  // ---------- build grid ----------
+  const tiles = [];
+  for (let i = 0; i < SLOTS; i++) {
+    const { left, top } = slotPos(i);
+    let el;
+    if (CHANNELS[i]) {
+      el = document.createElement('button');
+      el.className = 'tile';
+      el.setAttribute('aria-label', CHANNELS[i].name);
+      el.innerHTML = `<div class="art">${renderArt(i)}</div>`;
+      el.addEventListener('mousedown', (e) => e.preventDefault());
+      el.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch' && mode === 'menu') select(i, true); });
+      el.addEventListener('pointerleave', () => { if (selected === i && document.activeElement !== el) deselect(); });
+      el.addEventListener('focus', () => {
+        if (slotPos(i).page !== page) setPage(slotPos(i).page);
+        select(i, true);
+      });
+      el.addEventListener('blur', () => { if (selected === i) deselect(); });
+      el.addEventListener('click', () => { if (!swiped) openChannel(i); });
+    } else {
+      el = document.createElement('div');
+      el.className = 'tile empty';
+    }
+    Object.assign(el.style, { left: left + 'px', top: top + 'px' });
+    strip.appendChild(el);
+    tiles.push(el);
+  }
+
+  // ---------- selection & label ----------
+  function select(i, sound) {
+    if (selected === i) return;
+    deselect();
+    selected = i;
+    tiles[i].classList.add('selected');
+    if (sound) sfx.hover();
+    labelTimer = setTimeout(() => {
+      const { left, top } = screenPos(i);
+      label.textContent = CHANNELS[i].name;
+      const w = label.offsetWidth;
+      label.style.left = Math.min(Math.max(left + TILE_W / 2, w / 2 + 12), 1280 - w / 2 - 12) + 'px';
+      label.style.top = (top + TILE_H - 14) + 'px';
+      label.classList.add('show');
+    }, 110);
+  }
+  function deselect() {
+    clearTimeout(labelTimer);
+    label.classList.remove('show');
+    if (selected < 0) return;
+    tiles[selected].classList.remove('selected');
+    selected = -1;
+  }
+
+  // ---------- pages ----------
+  function setPage(p, sound = true) {
+    p = Math.max(0, Math.min(PAGES - 1, p));
+    if (p === page) return false;
+    deselect();
+    page = p;
+    strip.style.transform = `translateX(${-page * COLS * COL_STEP}px)`;
+    prevBtn.hidden = page === 0;
+    nextBtn.hidden = page === PAGES - 1;
+    if (sound) sfx.page();
+    return true;
+  }
+  prevBtn.addEventListener('click', () => setPage(page - 1));
+  nextBtn.addEventListener('click', () => setPage(page + 1));
+
+  function navigate(dx, dy) {
+    if (selected < 0) {
+      const first = CHANNELS.findIndex((c, i) => c && slotPos(i).page === page);
+      if (first >= 0) focusTile(first);
+      return;
+    }
+    const s = slotPos(selected);
+    let gc = s.page * COLS + s.col, r = s.row;
+    for (;;) {
+      gc += dx; r += dy;
+      if (gc < 0 || gc >= PAGES * COLS || r < 0 || r >= ROWS) return;
+      const i = Math.floor(gc / COLS) * PER_PAGE + r * COLS + (gc % COLS);
+      if (CHANNELS[i]) { focusTile(i); return; }
+    }
+  }
+  function focusTile(i) {
+    if (slotPos(i).page !== page) setPage(slotPos(i).page);
+    tiles[i].focus({ preventScroll: true });
+  }
+
+  // ---------- channel screen ----------
+  const hasChannel = (i, d) => { for (i += d; i >= 0 && i < SLOTS; i += d) if (CHANNELS[i]) return true; return false; };
+  function updateChannelUI() {
+    const ch = CHANNELS[current];
+    chMsg.textContent = ch.noStart || '';
+    chMsg.hidden = !ch.noStart;
+    startBtn.disabled = !!ch.noStart;
+    chPrev.hidden = !hasChannel(current, -1);
+    chNext.hidden = !hasChannel(current, 1);
+  }
+
+  function openChannel(i) {
+    if (mode !== 'menu') return;
+    mode = 'channel';
+    current = i;
+    openedByKey = lastInput === 'key';
+    sfx.open();
+    const { left, top } = screenPos(i);
+    deselect();
+    chArt.innerHTML = renderArt(i);
+    updateChannelUI();
+    channel.hidden = false;
+    channel.classList.add('no-anim');
+    channel.classList.remove('full', 'ready');
+    Object.assign(channel.style, px(left, top, TILE_W, TILE_H));
+    channel.getBoundingClientRect();
+    channel.classList.remove('no-anim');
+    channel.classList.add('full');
+    Object.assign(channel.style, px(0, 0, 1280, 720));
+    menu.classList.add('away');
+    setTimeout(() => {
+      if (mode !== 'channel') return;
+      channel.classList.add('ready');
+      if (openedByKey) (startBtn.disabled ? backBtn : startBtn).focus({ preventScroll: true });
+    }, 480);
+  }
+
+  function closeChannel() {
+    if (mode !== 'channel') return;
+    mode = 'closing';
+    sfx.back();
+    channel.classList.remove('ready');
+    const p = slotPos(current).page;
+    if (p !== page) {
+      strip.classList.add('no-anim');
+      setPage(p, false);
+      strip.getBoundingClientRect();
+      strip.classList.remove('no-anim');
+    }
+    const { left, top } = screenPos(current);
+    channel.classList.remove('full');
+    Object.assign(channel.style, px(left, top, TILE_W, TILE_H));
+    menu.classList.remove('away');
+    setTimeout(() => {
+      channel.hidden = true;
+      mode = 'menu';
+      if (openedByKey || lastInput === 'key') tiles[current].focus({ preventScroll: true });
+    }, 480);
+  }
+
+  function stepChannel(d) {
+    if (mode !== 'channel' || !hasChannel(current, d)) return;
+    do current += d; while (!CHANNELS[current]);
+    sfx.page();
+    chArt.innerHTML = renderArt(current);
+    chArt.animate([{ opacity: 0, transform: `translateX(${d * 60}px)` }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'ease-out' });
+    updateChannelUI();
+    if (document.activeElement && document.activeElement.hidden) backBtn.focus({ preventScroll: true });
+  }
+
+  function startChannel() {
+    if (mode !== 'channel' || CHANNELS[current].noStart) return;
+    mode = 'launch';
+    sfx.start();
+    flash.classList.add('on');
+    setTimeout(() => {
+      launchArt.innerHTML = renderArt(current);
+      launchTitle.textContent = CHANNELS[current].name;
+      launch.hidden = false;
+      launch.focus({ preventScroll: true });
+      flash.classList.remove('on');
+    }, 380);
+  }
+  function exitLaunch() {
+    if (mode !== 'launch') return;
+    launch.classList.add('leaving');
+    setTimeout(() => {
+      launch.hidden = true;
+      launch.classList.remove('leaving');
+      launchArt.innerHTML = '';
+      mode = 'channel';
+      closeChannel();
+    }, 300);
+  }
+
+  backBtn.addEventListener('click', closeChannel);
+  startBtn.addEventListener('click', startChannel);
+  chPrev.addEventListener('click', () => stepChannel(-1));
+  chNext.addEventListener('click', () => stepChannel(1));
+  launch.addEventListener('click', exitLaunch);
+
+  // ---------- dialogs ----------
+  function openDialog(titleText, bodyHTML, buttons) {
+    if (mode !== 'menu') return;
+    mode = 'dialog';
+    deselect();
+    sfx.open();
+    dlgTitle.textContent = titleText;
+    dlgBody.innerHTML = bodyHTML;
+    dlgButtons.replaceChildren(...buttons.map((b) => {
+      const el = document.createElement('button');
+      el.className = 'wii-btn hov';
+      el.textContent = b.label;
+      el.addEventListener('click', () => (b.action || closeDialog)());
+      return el;
+    }));
+    dialog.hidden = false;
+    requestAnimationFrame(() => dialog.classList.add('show'));
+    if (lastInput === 'key') dlgButtons.firstChild.focus({ preventScroll: true });
+  }
+  function closeDialog() {
+    if (mode !== 'dialog') return;
+    sfx.back();
+    dialog.classList.remove('show');
+    mode = 'menu';
+    setTimeout(() => { if (mode !== 'dialog') dialog.hidden = true; }, 200);
+  }
+
+  $('#wiiBtn').addEventListener('click', () => {
+    const seg = (key, opts) => `<div class="seg" data-key="${key}">${opts.map(([v, t]) => `<button class="hov" data-v="${v}">${t}</button>`).join('')}</div>`;
+    openDialog('Settings', `
+      <div class="setting"><span>Sound</span>${seg('sound', [[true, 'On'], [false, 'Off']])}</div>
+      <div class="setting"><span>Clock</span>${seg('clock24', [[false, '12-Hour'], [true, '24-Hour']])}</div>`,
+      [{ label: 'Back' }]);
+    const refresh = () => dlgBody.querySelectorAll('.seg').forEach((s) =>
+      s.querySelectorAll('button').forEach((b) => b.classList.toggle('on', String(settings[s.dataset.key]) === b.dataset.v)));
+    dlgBody.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+      const key = b.parentElement.dataset.key;
+      settings[key] = b.dataset.v === 'true';
+      store.set(key, settings[key]);
+      refresh();
+      updateClock();
+      sfx.click();
+    }));
+    refresh();
+  });
+
+  $('#sdBtn').addEventListener('click', () => openDialog('SD Card Menu', 'There are no channels on the SD Card.', [{ label: 'OK' }]));
+
+  const mailBtn = $('#mailBtn'), mailCount = $('#mailCount');
+  function updateMail() {
+    mailBtn.classList.toggle('unread', unread);
+    mailCount.hidden = !unread;
+  }
+  mailBtn.addEventListener('click', () => openDialog(dateText(new Date()),
+    'Welcome back! Point at a channel and click it to see its preview, then press Start.<br>Use the arrows, the mouse wheel, or swipe to change pages.',
+    [{ label: 'OK', action: () => { unread = false; store.set('mailRead', true); updateMail(); closeDialog(); } }]));
+  updateMail();
+
+  // hover blips on bar / dialog / channel buttons
+  document.addEventListener('pointerover', (e) => {
+    const el = e.target.closest('.hov, .page-arrow');
+    if (el && !el.contains(e.relatedTarget) && e.pointerType !== 'touch' && !el.disabled) sfx.hover();
+  });
+
+  // ---------- clock ----------
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dateText = (d) => `${DAYS[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
+  const hh = $('#hh'), mm = $('#mm'), colon = $('#colon'), ampm = $('#ampm'), dateEl = $('#date');
+  function updateClock() {
+    const d = new Date(), h = d.getHours();
+    hh.textContent = settings.clock24 ? String(h).padStart(2, '0') : String(h % 12 || 12);
+    mm.textContent = String(d.getMinutes()).padStart(2, '0');
+    ampm.hidden = settings.clock24;
+    ampm.textContent = h < 12 ? 'AM' : 'PM';
+    colon.style.visibility = d.getSeconds() % 2 ? 'hidden' : 'visible';
+    dateEl.textContent = dateText(d);
+  }
+  updateClock();
+  setInterval(updateClock, 500);
+
+  // ---------- Wii Remote pointer ----------
+  let curX = -100, curY = -100, tilt = 0, raf = 0;
+  function drawCursor() {
+    raf = 0;
+    tilt *= .82;
+    cursor.style.transform = `translate(${curX}px, ${curY}px) scale(${scale}) rotate(${-14 + tilt}deg) translate(-22px, -2px)`;
+    if (Math.abs(tilt) > .2) raf = requestAnimationFrame(drawCursor);
+  }
+  addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'touch') return;
+    lastInput = 'pointer';
+    tilt = Math.max(-12, Math.min(12, tilt + (e.clientX - curX) * .35));
+    curX = e.clientX; curY = e.clientY;
+    document.documentElement.classList.add('fake-cursor');
+    cursor.classList.add('on');
+    if (!raf) raf = requestAnimationFrame(drawCursor);
+  });
+  document.documentElement.addEventListener('mouseleave', () => cursor.classList.remove('on'));
+  addEventListener('pointerdown', (e) => {
+    lastInput = 'pointer';
+    if (e.pointerType === 'touch') {
+      cursor.classList.remove('on');
+      document.documentElement.classList.remove('fake-cursor');
+    }
+  });
+
+  // ---------- swipe & wheel paging ----------
+  let downX = null;
+  grid.addEventListener('pointerdown', (e) => { downX = e.clientX; swiped = false; });
+  addEventListener('pointerup', (e) => {
+    if (downX === null) return;
+    const dx = (e.clientX - downX) / scale;
+    downX = null;
+    if (Math.abs(dx) > 70 && mode === 'menu') {
+      swiped = true;
+      setPage(page + (dx < 0 ? 1 : -1));
+    }
+  });
+  let wheelLock = 0;
+  addEventListener('wheel', (e) => {
+    if (mode !== 'menu' || Date.now() < wheelLock) return;
+    const d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (Math.abs(d) >= 10 && setPage(page + Math.sign(d))) wheelLock = Date.now() + 450;
+  }, { passive: true });
+
+  // ---------- keyboard ----------
+  const DIRS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  addEventListener('keydown', (e) => {
+    lastInput = 'key';
+    const k = e.key;
+    if (mode === 'menu') {
+      if (DIRS[k]) navigate(...DIRS[k]);
+      else if (k === '+' || k === '=' || k === 'PageDown') setPage(page + 1);
+      else if (k === '-' || k === 'PageUp') setPage(page - 1);
+      else return;
+    } else if (mode === 'channel') {
+      if (k === 'Escape' || k === 'Backspace') closeChannel();
+      else if (k === 'ArrowLeft') stepChannel(-1);
+      else if (k === 'ArrowRight') stepChannel(1);
+      else return;
+    } else if (mode === 'launch') {
+      if (k === 'Escape' || k === 'Enter' || k === ' ') exitLaunch();
+      else return;
+    } else if (mode === 'dialog') {
+      if (k === 'Escape') closeDialog();
+      else return;
+    } else return;
+    e.preventDefault();
+  });
+})();
+</script>
+</body>
+</html>
