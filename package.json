@@ -4,6 +4,7 @@
   "private": true,
   "description": "Portfolio site styled after the Wii U Menu",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "covers": "node scripts/fetch-covers.js"
   }
 }

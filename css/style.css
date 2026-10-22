@@ -410,6 +410,19 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 }
 
 .project-hero > .tile-art.game { font-size: 40px; }
+
+/* Cover art sits over the title card */
+.tile-art { position: relative; overflow: hidden; }
+
+.well > img.cover,
+.tile-art > img.cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
 .launch-icon > .tile-art.game { font-size: 8px; padding: 0 4%; }
 
 /* Folder: 3x3 glossy squares with the name over them */

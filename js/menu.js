@@ -293,12 +293,13 @@
 
   const wellMarkup = (app) => {
     const label = app.label ? `<span class="label">${Pages.esc(app.label).replace(/\n/g, "<br>")}</span>` : "";
-    if (app.icon) return `<span class="well"><img src="${Pages.esc(app.icon)}" alt="" draggable="false"></span>`;
+    const cover = app.icon ? `<img class="cover" src="${Pages.esc(app.icon)}" alt="" draggable="false">` : "";
+    if (app.icon && !app.game) return `<span class="well">${cover}</span>`;
     if (isFolder(app)) return `<span class="well">${'<span class="cell"></span>'.repeat(9)}${label}</span>`;
     if (app.game) {
       // shrink long titles so each line fits on the card
       const longest = Math.max(...String(app.label || "").split("\n").map((line) => line.length));
-      return `<span class="well game" style="--fs:${longest > 11 ? 15 : longest > 9 ? 17 : 20}">${label}</span>`;
+      return `<span class="well game" style="--fs:${longest > 11 ? 15 : longest > 9 ? 17 : 20}">${label}${cover}</span>`;
     }
     return `<span class="well">${label}</span>`;
   };
@@ -371,6 +372,11 @@
   })(apps);
 
   // ---- Build ----
+
+  // A cover that fails to load disappears, revealing the title card underneath.
+  document.addEventListener("error", (e) => {
+    if (e.target instanceof HTMLImageElement && e.target.classList.contains("cover")) e.target.remove();
+  }, true);
 
   $("userAvatar").innerHTML = avatarMarkup();
   if (user.name) $("user").setAttribute("aria-label", user.name);

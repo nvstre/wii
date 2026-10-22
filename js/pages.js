@@ -32,10 +32,12 @@ window.WiiPages = (() => {
     `<a class="pill${primary ? " primary" : ""}" href="${esc(link.url)}"${external(link.url)}>${esc(link.label || host(link.url))}</a>`;
 
   const tileArt = (item) =>
-    item.icon
+    item.icon && !item.game
       ? `<img src="${esc(item.icon)}" alt="" draggable="false">`
       : `<span class="tile-art${item.game ? " game" : ""}" style="--c:${esc(item.color || "#9a9a9a")};--c2:${esc(item.color2 || item.color || "#9a9a9a")}">` +
-        `${esc(item.label || "").replace(/\n/g, "<br>")}</span>`;
+        `${esc(item.label || "").replace(/\n/g, "<br>")}` +
+        (item.icon ? `<img class="cover" src="${esc(item.icon)}" alt="" draggable="false">` : "") +
+        "</span>";
 
   // ---- Pages ----
 

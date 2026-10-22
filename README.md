@@ -35,6 +35,7 @@ Everything lives in `js/config.js`. Anything marked "Placeholder" is yours to re
 | Storage icon (bottom left) | About this site | `pages.credits` |
 | Switch-screens button | TV screen intro | `tv` |
 
+- Game covers: run `npm run covers` once (needs internet). It downloads each game's cover from its Wikipedia page into `img/games/`. Any game without a cover shows its coloured title card instead. To use your own picture, save it over the file in `img/games/`.
 - Project screenshots: put images in `img/` and list them in the project's `images` (the first one is the big picture).
 - Your Mii: replace `img/avatar.png` (square, transparent background looks best).
 - Résumé: put the file in `files/` and add it to `pages.downloads.files`.
@@ -58,4 +59,4 @@ Optional: add your own domain on the same Pages settings screen.
 
 ## Credits
 
-The background video and menu music in `media/` come from a capture of the Wii U Menu. All other artwork is original. Fan-made; not affiliated with Nintendo.
+The background video and menu music in `media/` come from a capture of the Wii U Menu, and game covers downloaded into `img/games/` belong to their publishers. All other artwork is original. Fan-made; not affiliated with Nintendo.
