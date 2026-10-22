@@ -292,9 +292,14 @@
     user.avatar ? `<img src="${Pages.esc(user.avatar)}" alt="" draggable="false">` : DEFAULT_AVATAR;
 
   const wellMarkup = (app) => {
-    const label = app.label ? `<span class="label">${Pages.esc(app.label)}</span>` : "";
+    const label = app.label ? `<span class="label">${Pages.esc(app.label).replace(/\n/g, "<br>")}</span>` : "";
     if (app.icon) return `<span class="well"><img src="${Pages.esc(app.icon)}" alt="" draggable="false"></span>`;
     if (isFolder(app)) return `<span class="well">${'<span class="cell"></span>'.repeat(9)}${label}</span>`;
+    if (app.game) {
+      // shrink long titles so each line fits on the card
+      const longest = Math.max(...String(app.label || "").split("\n").map((line) => line.length));
+      return `<span class="well game" style="--fs:${longest > 11 ? 15 : longest > 9 ? 17 : 20}">${label}</span>`;
+    }
     return `<span class="well">${label}</span>`;
   };
 
@@ -306,6 +311,7 @@
       slot.className = `slot glass app${isFolder(app) ? " folder" : ""}`;
       slot.setAttribute("aria-label", app.title || "");
       slot.style.setProperty("--c", app.color || "#9a9a9a");
+      if (app.color2) slot.style.setProperty("--c2", app.color2);
       slot.innerHTML = wellMarkup(app);
     } else {
       slot = document.createElement("div");

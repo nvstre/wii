@@ -29,6 +29,8 @@ window.WIIU_CONFIG = {
   //                 tech: [...], images: [...], links: [{ label, url }]
   //   Folder tile:  title, label, color, apps: [ ...project tiles ]
   //   Link tile:    title, label + color (or icon), url   (opens in a new tab)
+  //   Game tile:    game: true, label ("\n" for a line break), color + color2 for the gradient;
+  //                 add icon: "img/cover.jpg" to use a real cover instead
   apps: [
     {
       title: "Web Projects", label: "Web", color: "#e9505c",
@@ -48,7 +50,7 @@ window.WIIU_CONFIG = {
       ],
     },
     {
-      title: "Games", label: "Games", color: "#36a9e1",
+      title: "My Games", label: "My Games", color: "#36a9e1",
       apps: [
         {
           title: "Game One", label: "G1", color: "#9b59b6", year: "2025", role: "Programming & art",
@@ -73,6 +75,105 @@ window.WIIU_CONFIG = {
       description: "Placeholder: your best project gets its own tile on the front page.",
       tech: ["HTML", "CSS", "JavaScript"],
       links: [{ label: "Source code", url: "https://github.com" }],
+    },
+    // ---- Popular Wii U games ----
+    {
+      title: "Mario Kart 8", game: true, label: "Mario\nKart 8", color: "#e4262a", color2: "#8f0f14",
+      year: "2014", role: "Nintendo EAD · Racing",
+      description: "Anti-gravity kart racing with 32 tracks, split-screen for four and twelve-player online races. The best-selling game on Wii U.",
+      tech: ["Racing", "Multiplayer"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Mario_Kart_8" }],
+    },
+    {
+      title: "Super Smash Bros. for Wii U", game: true, label: "Super Smash\nBros.", color: "#2a5bd7", color2: "#0b1a45",
+      year: "2014", role: "Bandai Namco & Sora · Fighting",
+      description: "Nintendo's all-star fighter, with a mode for up to eight players at once and characters from across Nintendo's history.",
+      tech: ["Fighting", "Multiplayer"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Super_Smash_Bros._for_Nintendo_3DS_and_Wii_U" }],
+    },
+    {
+      title: "Splatoon", game: true, label: "Splatoon", color: "#f5a400", color2: "#6b2ad6",
+      year: "2015", role: "Nintendo EAD · Shooter",
+      description: "Four-on-four shooter where you win by covering the stage in your team's ink, not by knocking out the other side.",
+      tech: ["Shooter", "Online"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Splatoon_(video_game)" }],
+    },
+    {
+      title: "Super Mario 3D World", game: true, label: "Super Mario\n3D World", color: "#ffc61a", color2: "#e2401b",
+      year: "2013", role: "Nintendo EAD Tokyo · Platformer",
+      description: "Co-op 3D platformer for up to four players, best known for the Cat Mario power-up.",
+      tech: ["Platformer", "Co-op"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Super_Mario_3D_World" }],
+    },
+    {
+      title: "The Legend of Zelda: Breath of the Wild", game: true, label: "Breath of\nthe Wild", color: "#3a8fb7", color2: "#163545",
+      year: "2017", role: "Nintendo EPD · Action-adventure",
+      description: "An open-world Hyrule you can explore in any order. It came out on Wii U and Nintendo Switch on the same day.",
+      tech: ["Open world", "Adventure"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/The_Legend_of_Zelda:_Breath_of_the_Wild" }],
+    },
+    {
+      title: "Super Mario Maker", game: true, label: "Mario\nMaker", color: "#ffb400", color2: "#d9480f",
+      year: "2015", role: "Nintendo EAD · Level creation",
+      description: "Build your own Mario levels on the GamePad touch screen and play levels made by people all over the world.",
+      tech: ["Platformer", "Creation"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Super_Mario_Maker" }],
+    },
+    {
+      title: "Nintendo Land", game: true, label: "Nintendo\nLand", color: "#3ab0e8", color2: "#e8448f",
+      year: "2012", role: "Nintendo EAD · Party",
+      description: "The launch-day theme park of minigames, built to show off GamePad play where one player sees something the others can't.",
+      tech: ["Party", "Multiplayer"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Nintendo_Land" }],
+    },
+    {
+      title: "New Super Mario Bros. U", game: true, label: "New Super\nMario Bros. U", color: "#36a3ea", color2: "#1747a6",
+      year: "2012", role: "Nintendo EAD · Platformer",
+      description: "Side-scrolling Mario at launch, where an extra player can help by placing blocks on the GamePad.",
+      tech: ["Platformer", "Co-op"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/New_Super_Mario_Bros._U" }],
+    },
+    {
+      title: "Donkey Kong Country: Tropical Freeze", game: true, label: "Tropical\nFreeze", color: "#5cc8ef", color2: "#123f78",
+      year: "2014", role: "Retro Studios · Platformer",
+      description: "A tough, beautiful side-scroller from Retro Studios, with a soundtrack by David Wise.",
+      tech: ["Platformer", "Co-op"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Donkey_Kong_Country:_Tropical_Freeze" }],
+    },
+    {
+      title: "Bayonetta 2", game: true, label: "Bayonetta 2", color: "#8c1d40", color2: "#1c1029",
+      year: "2014", role: "PlatinumGames · Action",
+      description: "Stylish, over-the-top action from PlatinumGames. The Wii U release also came with the first Bayonetta.",
+      tech: ["Action", "Hack and slash"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Bayonetta_2" }],
+    },
+    {
+      title: "Xenoblade Chronicles X", game: true, label: "Xenoblade\nChronicles X", color: "#3f8fbf", color2: "#0a2440",
+      year: "2015", role: "Monolith Soft · RPG",
+      description: "A huge open-world RPG on the alien planet Mira, where you eventually pilot giant mechs called Skells.",
+      tech: ["RPG", "Open world"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Xenoblade_Chronicles_X" }],
+    },
+    {
+      title: "Pikmin 3", game: true, label: "Pikmin 3", color: "#8bd04e", color2: "#256b2c",
+      year: "2013", role: "Nintendo EAD · Strategy",
+      description: "Lead swarms of little plant creatures to gather fruit and survive on a strange planet.",
+      tech: ["Strategy", "Co-op"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Pikmin_3" }],
+    },
+    {
+      title: "The Legend of Zelda: The Wind Waker HD", game: true, label: "The Wind\nWaker HD", color: "#4cc3ee", color2: "#0f5f99",
+      year: "2013", role: "Nintendo EAD · Action-adventure",
+      description: "An HD remake of the cel-shaded sailing adventure, with the map and items moved to the GamePad.",
+      tech: ["Adventure", "Remake"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/The_Legend_of_Zelda:_The_Wind_Waker_HD" }],
+    },
+    {
+      title: "Captain Toad: Treasure Tracker", game: true, label: "Captain\nToad", color: "#f6d24a", color2: "#d4552a",
+      year: "2014", role: "Nintendo EAD Tokyo · Puzzle",
+      description: "Bite-sized diorama levels you turn around to find the path to each Power Star.",
+      tech: ["Puzzle", "Platformer"],
+      links: [{ label: "Wikipedia", url: "https://en.wikipedia.org/wiki/Captain_Toad:_Treasure_Tracker" }],
     },
   ],
 

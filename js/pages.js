@@ -34,7 +34,8 @@ window.WiiPages = (() => {
   const tileArt = (item) =>
     item.icon
       ? `<img src="${esc(item.icon)}" alt="" draggable="false">`
-      : `<span class="tile-art" style="--c:${esc(item.color || "#9a9a9a")}">${esc(item.label || "")}</span>`;
+      : `<span class="tile-art${item.game ? " game" : ""}" style="--c:${esc(item.color || "#9a9a9a")};--c2:${esc(item.color2 || item.color || "#9a9a9a")}">` +
+        `${esc(item.label || "").replace(/\n/g, "<br>")}</span>`;
 
   // ---- Pages ----
 

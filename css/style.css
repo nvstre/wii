@@ -382,6 +382,36 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   z-index: 1;
 }
 
+/* Game: a title card in the game's colours */
+.slot.app .well.game,
+.tile-art.game {
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0) 60%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0 8%, rgba(255, 255, 255, 0) 8% 16%),
+    linear-gradient(135deg, var(--c), var(--c2, var(--c)));
+}
+
+.well.game .label {
+  font-size: calc(var(--u) * var(--fs, 20));
+  white-space: nowrap;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 0 calc(var(--u) * 2) rgba(0, 0, 0, 0.55),
+    0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(0, 0, 0, 0.4);
+}
+
+.tile-art.game {
+  font-weight: 700;
+  line-height: 1.08;
+  text-align: center;
+  padding: 0 8%;
+}
+
+.project-hero > .tile-art.game { font-size: 40px; }
+.launch-icon > .tile-art.game { font-size: 8px; padding: 0 4%; }
+
 /* Folder: 3x3 glossy squares with the name over them */
 .slot.folder .well {
   background: rgba(255, 255, 255, 0.35);
@@ -390,6 +420,12 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   gap: calc(var(--u) * 5);
   padding: calc(var(--u) * 1);
+}
+
+.slot.folder .label {
+  font-size: calc(var(--u) * 21);
+  white-space: nowrap;
+  padding: 0;
 }
 
 .slot.folder .cell {
