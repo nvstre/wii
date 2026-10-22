@@ -1,7 +1,9 @@
 (() => {
   const config = window.WIIU_CONFIG || {};
+  const Pages = window.WiiPages;
   const apps = config.apps || [];
   const dockItems = config.dock || [];
+  const user = config.user || {};
   const PER_PAGE = 15;
 
   const $ = (id) => document.getElementById(id);
@@ -12,33 +14,51 @@
   const nextBtn = $("next");
   const launchEl = $("launch");
   const launchTitle = $("launchTitle");
+  const launchIcon = $("launchIcon");
+  const launchSplash = $("launchSplash");
   const launchBody = $("launchBody");
+  const folderView = $("folderView");
+  const folderGrid = $("folderGrid");
+  const tvEl = $("tv");
 
   const portrait = window.matchMedia("(max-aspect-ratio: 1/1)");
   const pageCount = Math.max(config.minPages || 1, Math.ceil(apps.length / PER_PAGE));
 
   let page = 0;
-  let selected = -1;      // global slot index, -1 = none
+  let selected = -1;      // global slot index on the main grid, -1 = none
   let openFrom = null;    // element the app window grew out of
 
   const cols = () => (portrait.matches ? 3 : 5);
+  const isFolder = (item) => Array.isArray(item.apps) || Boolean(item.folder);
 
-  // ---- Sound ----
+  // ---- Sound: UI blips and the menu music share one context and one mute switch ----
 
-  const sfx = (() => {
+  const audio = (() => {
     let ctx = null;
-    const ensure = () => {
-      if (!config.sounds) return null;
-      try {
-        ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-        if (ctx.state === "suspended") ctx.resume();
-      } catch (e) {
-        ctx = null;
+    let master = null;
+    let muted = false;
+    try {
+      muted = localStorage.getItem("wiiu-muted") === "1";
+    } catch (e) {}
+
+    const context = () => {
+      if (!ctx) {
+        try {
+          ctx = new (window.AudioContext || window.webkitAudioContext)();
+          master = ctx.createGain();
+          master.gain.value = muted ? 0 : 1;
+          master.connect(ctx.destination);
+        } catch (e) {
+          ctx = null;
+        }
       }
+      if (ctx && ctx.state === "suspended") ctx.resume();
       return ctx;
     };
+
     const tone = (from, to, dur, { type = "sine", gain = 0.06, delay = 0 } = {}) => {
-      const c = ensure();
+      if (!config.sounds || muted) return;
+      const c = context();
       if (!c) return;
       const t = c.currentTime + delay;
       const osc = c.createOscillator();
@@ -49,36 +69,76 @@
       amp.gain.setValueAtTime(0.0001, t);
       amp.gain.exponentialRampToValueAtTime(gain, t + 0.01);
       amp.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(amp).connect(c.destination);
+      osc.connect(amp).connect(master);
       osc.start(t);
       osc.stop(t + dur + 0.02);
     };
+
+    // Music is fetched up front but can only start after the visitor's first click or key press.
+    const music = typeof config.music === "string" ? { src: config.music } : config.music;
+    const musicData = music
+      ? fetch(music.src).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null)
+      : Promise.resolve(null);
+    let musicStarted = false;
+
+    async function startMusic() {
+      if (musicStarted || !music) return;
+      musicStarted = true;
+      const c = context();
+      const data = await musicData;
+      if (!c || !data) return;
+      try {
+        const buffer = await new Promise((resolve, reject) => c.decodeAudioData(data, resolve, reject));
+        const src = c.createBufferSource();
+        src.buffer = buffer;
+        src.loop = true;
+        if (music.loopEnd) {
+          src.loopStart = music.loopStart || 0;
+          src.loopEnd = music.loopEnd;
+        }
+        const fade = c.createGain();
+        fade.gain.setValueAtTime(0, c.currentTime);
+        fade.gain.linearRampToValueAtTime(music.volume == null ? 0.35 : music.volume, c.currentTime + 2);
+        src.connect(fade).connect(master);
+        src.start(0, music.loopStart || 0);
+      } catch (e) {}
+    }
+
+    const unlock = () => {
+      context();
+      startMusic();
+      window.removeEventListener("pointerdown", unlock, true);
+      window.removeEventListener("keydown", unlock, true);
+    };
+    window.addEventListener("pointerdown", unlock, true);
+    window.addEventListener("keydown", unlock, true);
+
     return {
-      select: () => tone(1500, 1900, 0.05, { gain: 0.05 }),
-      move: () => tone(1100, 1200, 0.035, { gain: 0.03 }),
-      page: () => tone(420, 760, 0.12, { type: "triangle", gain: 0.05 }),
-      open: () => {
-        tone(660, 660, 0.09);
-        tone(990, 990, 0.12, { delay: 0.07 });
-        tone(1320, 1320, 0.2, { delay: 0.14, gain: 0.05 });
+      get muted() {
+        return muted;
       },
-      back: () => tone(900, 500, 0.12, { type: "triangle", gain: 0.05 }),
-      none: () => tone(220, 180, 0.08, { type: "square", gain: 0.02 }),
+      setMuted(on) {
+        muted = on;
+        try {
+          localStorage.setItem("wiiu-muted", on ? "1" : "0");
+        } catch (e) {}
+        if (master) master.gain.setTargetAtTime(on ? 0 : 1, ctx.currentTime, 0.05);
+      },
+      sfx: {
+        select: () => tone(1500, 1900, 0.05, { gain: 0.05 }),
+        move: () => tone(1100, 1200, 0.035, { gain: 0.03 }),
+        page: () => tone(420, 760, 0.12, { type: "triangle", gain: 0.05 }),
+        open: () => {
+          tone(660, 660, 0.09);
+          tone(990, 990, 0.12, { delay: 0.07 });
+          tone(1320, 1320, 0.2, { delay: 0.14, gain: 0.05 });
+        },
+        back: () => tone(900, 500, 0.12, { type: "triangle", gain: 0.05 }),
+        none: () => tone(220, 180, 0.08, { type: "square", gain: 0.02 }),
+      },
     };
   })();
-
-  if (config.music) {
-    const music = new Audio(config.music);
-    music.loop = true;
-    music.volume = 0.4;
-    const start = () => {
-      music.play().catch(() => {});
-      window.removeEventListener("pointerdown", start);
-      window.removeEventListener("keydown", start);
-    };
-    window.addEventListener("pointerdown", start);
-    window.addEventListener("keydown", start);
-  }
+  const sfx = audio.sfx;
 
   // ---- Artwork ----
 
@@ -184,15 +244,6 @@
     return "";
   };
 
-  const wellMarkup = (app) => {
-    const label = app.label ? `<span class="label">${app.label}</span>` : "";
-    if (app.icon) return `<span class="well"><img src="${app.icon}" alt="" draggable="false"></span>`;
-    if (app.folder) return `<span class="well">${'<span class="cell"></span>'.repeat(9)}${label}</span>`;
-    return `<span class="well">${label}</span>`;
-  };
-
-  // ---- Build ----
-
   // Background: two copies of the video crossfade near the end, so the loop has no visible jump.
   const bg = $("bg");
   const videos = Array.from(bg.querySelectorAll("video"));
@@ -237,8 +288,78 @@
     active.play().catch(() => {});
   }
 
-  const user = config.user || {};
-  $("userAvatar").innerHTML = user.avatar ? `<img src="${user.avatar}" alt="" draggable="false">` : DEFAULT_AVATAR;
+  const avatarMarkup = () =>
+    user.avatar ? `<img src="${Pages.esc(user.avatar)}" alt="" draggable="false">` : DEFAULT_AVATAR;
+
+  const wellMarkup = (app) => {
+    const label = app.label ? `<span class="label">${Pages.esc(app.label)}</span>` : "";
+    if (app.icon) return `<span class="well"><img src="${Pages.esc(app.icon)}" alt="" draggable="false"></span>`;
+    if (isFolder(app)) return `<span class="well">${'<span class="cell"></span>'.repeat(9)}${label}</span>`;
+    return `<span class="well">${label}</span>`;
+  };
+
+  function makeSlot(app, index) {
+    let slot;
+    if (app) {
+      slot = document.createElement("button");
+      slot.type = "button";
+      slot.className = `slot glass app${isFolder(app) ? " folder" : ""}`;
+      slot.setAttribute("aria-label", app.title || "");
+      slot.style.setProperty("--c", app.color || "#9a9a9a");
+      slot.innerHTML = wellMarkup(app);
+    } else {
+      slot = document.createElement("div");
+      slot.className = "slot glass empty";
+      slot.innerHTML = '<span class="well"></span>';
+    }
+    slot.dataset.index = index;
+    return slot;
+  }
+
+  // ---- Routes: every page that can open in the app window, addressable as #/<id> ----
+
+  const PAGE_TITLES = {
+    contact: "Contact", blog: "Blog", services: "Services", links: "Links",
+    videos: "Videos", news: "News", downloads: "Downloads", credits: "About This Site",
+  };
+  const routes = {};
+  const routeOf = new Map();
+  const slug = (s) =>
+    String(s || "item").toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_]+/g, "-") || "item";
+
+  routes.about = { title: user.name || "About Me", icon: avatarMarkup(), render: () => Pages.about(user) };
+  Object.keys(Pages.builtIn).forEach((name) => {
+    routes[name] = {
+      title: PAGE_TITLES[name] || name,
+      icon: "",
+      render: () => Pages.builtIn[name]((config.pages || {})[name] || {}, user),
+    };
+  });
+  [...dockItems, config.cornerLeft].forEach((item) => {
+    if (item && item.page && routes[item.page]) {
+      routes[item.page].title = item.title || routes[item.page].title;
+      routes[item.page].icon = iconMarkup(item);
+    }
+  });
+
+  (function addProjects(list) {
+    list.forEach((item) => {
+      if (isFolder(item)) return addProjects(item.apps || []);
+      if (item.url || item.page) return;
+      let id = `p/${slug(item.title)}`;
+      for (let n = 2; routes[id]; n++) id = `p/${slug(item.title)}-${n}`;
+      routes[id] = {
+        title: item.title || "",
+        icon: Pages.tileArt(item),
+        render: () => (item.content != null ? item.content : Pages.project(item)),
+      };
+      routeOf.set(item, id);
+    });
+  })(apps);
+
+  // ---- Build ----
+
+  $("userAvatar").innerHTML = avatarMarkup();
   if (user.name) $("user").setAttribute("aria-label", user.name);
 
   const pages = [];
@@ -248,22 +369,7 @@
     pageEl.style.left = `calc(var(--page-pitch) * ${p} - var(--grid-w) / 2)`;
     for (let i = 0; i < PER_PAGE; i++) {
       const index = p * PER_PAGE + i;
-      const app = apps[index];
-      let slot;
-      if (app) {
-        slot = document.createElement("button");
-        slot.type = "button";
-        slot.className = `slot glass app${app.folder ? " folder" : ""}`;
-        slot.setAttribute("aria-label", app.title || "");
-        slot.style.setProperty("--c", app.color || "#9a9a9a");
-        slot.innerHTML = wellMarkup(app);
-      } else {
-        slot = document.createElement("div");
-        slot.className = "slot glass empty";
-        slot.innerHTML = '<span class="well"></span>';
-      }
-      slot.dataset.index = index;
-      pageEl.appendChild(slot);
+      pageEl.appendChild(makeSlot(apps[index], index));
     }
     track.appendChild(pageEl);
     pages.push(pageEl);
@@ -306,12 +412,22 @@
     if (!item) return btn.remove();
     btn.setAttribute("aria-label", item.title || "");
     btn.innerHTML = iconMarkup(item);
+    hoverLabel(btn, item.title);
     btn.addEventListener("click", () => activate(item, btn));
   });
 
-  // ---- State ----
+  // ---- Selection ----
 
   const selectedApp = () => (selected >= 0 ? apps[selected] : null);
+
+  // Shows the name bubble on a tile; below it when the tile is in the top row.
+  function showBubble(slot, text, row) {
+    bubble.remove();
+    if (!text) return;
+    bubble.textContent = text;
+    bubble.classList.toggle("below", row === 0);
+    slot.appendChild(bubble);
+  }
 
   function select(index, { sound = true } = {}) {
     if (selected >= 0) slots[selected].classList.remove("selected");
@@ -321,11 +437,7 @@
     const slot = slots[selected];
     slot.classList.add("selected");
     const app = apps[selected];
-    if (app && app.title) {
-      bubble.textContent = app.title;
-      bubble.classList.toggle("below", Math.floor((selected % PER_PAGE) / cols()) === 0);
-      slot.appendChild(bubble);
-    }
+    if (app) showBubble(slot, app.title, Math.floor((selected % PER_PAGE) / cols()));
     if (sound) app ? sfx.select() : sfx.move();
   }
 
@@ -349,49 +461,217 @@
     el.classList.add("bump");
   }
 
+  // Whatever a tile, dock icon or bubble points at: a folder, a page, a link or the TV screen.
   function activate(item, el) {
-    if (!item.url && !item.content) {
-      sfx.none();
-      bump(el);
+    if (isFolder(item)) return openFolder(item, el);
+    if (item.action === "tv") return toggleTv();
+    if (item.page === "menu") return hideTv();
+    if (item.url) {
+      sfx.open();
+      window.open(item.url, "_blank", "noopener");
       return;
     }
-    sfx.open();
-    hoverBubble.remove();
-    openFrom = el;
-    const r = el.getBoundingClientRect();
-    const s = launchEl.style;
-    s.setProperty("--t", `${r.top}px`);
-    s.setProperty("--l", `${r.left}px`);
-    s.setProperty("--r", `${window.innerWidth - r.right}px`);
-    s.setProperty("--b", `${window.innerHeight - r.bottom}px`);
-    launchTitle.textContent = item.title || "";
-    launchBody.innerHTML = item.content || "";
-    launchEl.hidden = false;
-    requestAnimationFrame(() => requestAnimationFrame(() => launchEl.classList.add("open")));
-    if (item.url) setTimeout(() => window.location.assign(item.url), 450);
-    else $("launchClose").focus({ preventScroll: true });
+    const id = item.page || routeOf.get(item);
+    if (id && routes[id]) return openRoute(id, el);
+    sfx.none();
+    if (el) bump(el);
   }
 
-  function closeApp() {
+  // ---- App window ----
+
+  let current = null;
+  let stack = [];
+  let closeTimer = 0;
+
+  function render(id) {
+    const route = routes[id];
+    launchTitle.textContent = route.title;
+    launchIcon.innerHTML = route.icon || "";
+    launchBody.innerHTML = route.render();
+    launchBody.scrollTop = 0;
+    Pages.mount(launchBody);
+    document.title = `${route.title} · ${user.name || "Portfolio"}`;
+  }
+
+  function openRoute(id, fromEl, { push = true } = {}) {
+    if (!routes[id]) return;
+    if (id === current) return;
+    clearTimeout(closeTimer);
+    hoverBubble.remove();
+    render(id);
+    if (!launchEl.hidden && launchEl.classList.contains("open")) {
+      stack.push(id);
+      sfx.select();
+    } else {
+      stack = [id];
+      openFrom = fromEl || null;
+      const r = fromEl
+        ? fromEl.getBoundingClientRect()
+        : { top: innerHeight / 2 - 60, left: innerWidth / 2 - 60, right: innerWidth / 2 + 60, bottom: innerHeight / 2 + 60 };
+      const s = launchEl.style;
+      s.setProperty("--t", `${r.top}px`);
+      s.setProperty("--l", `${r.left}px`);
+      s.setProperty("--r", `${innerWidth - r.right}px`);
+      s.setProperty("--b", `${innerHeight - r.bottom}px`);
+      launchSplash.innerHTML = routes[id].icon || "";
+      launchEl.hidden = false;
+      launchEl.classList.remove("open");
+      void launchEl.offsetWidth;
+      launchEl.classList.add("open");
+      sfx.open();
+      if (fromEl) $("launchClose").focus({ preventScroll: true });
+    }
+    current = id;
+    if (push && location.hash !== `#/${id}`) history.pushState(null, "", `#/${id}`);
+  }
+
+  function closeApp({ push = true } = {}) {
     if (launchEl.hidden) return;
     sfx.back();
     launchEl.classList.remove("open");
-    const done = () => {
+    current = null;
+    stack = [];
+    document.title = `${user.name || "Your Name"} · Portfolio`;
+    if (push && location.hash) history.pushState(null, "", location.pathname + location.search);
+    closeTimer = setTimeout(() => {
       launchEl.hidden = true;
       launchBody.innerHTML = "";
-      if (openFrom) openFrom.focus({ preventScroll: true });
-    };
-    launchEl.addEventListener("transitionend", done, { once: true });
-    setTimeout(() => { if (!launchEl.hidden) done(); }, 600);
+      if (openFrom && document.contains(openFrom)) openFrom.focus({ preventScroll: true });
+    }, 450);
   }
 
-  // Coming back from a url tile via the back button shouldn't leave the window open.
-  window.addEventListener("pageshow", (e) => {
-    if (e.persisted) {
-      launchEl.classList.remove("open");
-      launchEl.hidden = true;
+  function back() {
+    if (stack.length > 1) history.back();
+    else closeApp();
+  }
+
+  const routeFromHash = () => decodeURIComponent(location.hash.replace(/^#\/?/, ""));
+
+  window.addEventListener("hashchange", () => {
+    const id = routeFromHash();
+    if (!id || !routes[id]) return closeApp({ push: false });
+    if (id === current) return;
+    if (stack.length > 1 && stack[stack.length - 2] === id) {
+      stack.pop();
+      render(id);
+      current = id;
+      sfx.back();
+      return;
     }
+    openRoute(id, null, { push: false });
   });
+
+  $("launchBack").addEventListener("click", back);
+  $("launchClose").addEventListener("click", () => closeApp());
+
+  // ---- Folders ----
+
+  let folderItems = [];
+  let folderSel = -1;
+  let folderFrom = null;
+
+  const folderCols = () => (portrait.matches ? 3 : 5);
+
+  function openFolder(item, el) {
+    folderItems = item.apps || [];
+    folderSel = -1;
+    folderFrom = el || null;
+    $("folderTitle").textContent = item.title || "";
+    $("folderSwatch").style.setProperty("--c", item.color || "#9a9a9a");
+    folderGrid.innerHTML = "";
+    folderItems.forEach((app, i) => folderGrid.appendChild(makeSlot(app, i)));
+    if (!folderItems.length) folderGrid.innerHTML = '<p class="folder-empty">This folder is empty.</p>';
+    bubble.remove();
+    folderView.hidden = false;
+    void folderView.offsetWidth;
+    folderView.classList.add("open");
+    sfx.open();
+    $("folderClose").focus({ preventScroll: true });
+  }
+
+  function closeFolder() {
+    if (folderView.hidden) return;
+    sfx.back();
+    folderView.classList.remove("open");
+    folderItems = [];
+    setTimeout(() => {
+      folderView.hidden = true;
+      folderGrid.innerHTML = "";
+      if (selected >= 0) select(selected, { sound: false });
+      if (folderFrom && document.contains(folderFrom)) folderFrom.focus({ preventScroll: true });
+    }, 250);
+  }
+
+  folderGrid.addEventListener("click", (e) => {
+    const slot = e.target.closest(".slot.app");
+    if (!slot) return;
+    const index = Number(slot.dataset.index);
+    if (index === folderSel) return activate(folderItems[index], slot);
+    const prev = folderGrid.querySelector(".slot.selected");
+    if (prev) prev.classList.remove("selected");
+    folderSel = index;
+    slot.classList.add("selected");
+    showBubble(slot, folderItems[index].title, Math.floor(index / folderCols()));
+    sfx.select();
+  });
+
+  folderView.addEventListener("click", (e) => {
+    if (e.target === folderView) closeFolder();
+  });
+  $("folderClose").addEventListener("click", closeFolder);
+
+  // ---- TV screen ----
+
+  const tv = config.tv || {};
+  $("tvMii").innerHTML = avatarMarkup();
+  $("tvName").textContent = user.name || "";
+  $("tvTagline").textContent = user.tagline || "";
+  const SPOTS = [[2, 20], [72, 16], [2, 62], [72, 60], [38, 84], [38, 3]];
+  (tv.bubbles || []).slice(0, SPOTS.length).forEach((b, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tv-bubble glass";
+    btn.style.cssText = `left:${SPOTS[i][0]}%;top:${SPOTS[i][1]}%;--i:${i}`;
+    btn.innerHTML = `<span class="post-mii">${avatarMarkup()}</span><span>${Pages.esc(b.text)}</span>`;
+    btn.addEventListener("click", () => activate(b, btn));
+    $("tvBubbles").appendChild(btn);
+  });
+
+  function showTv() {
+    if (document.body.classList.contains("tv-mode")) return;
+    tvEl.hidden = false;
+    void tvEl.offsetWidth;
+    document.body.classList.add("tv-mode");
+    sfx.page();
+  }
+
+  function hideTv() {
+    if (tvEl.hidden) return;
+    document.body.classList.remove("tv-mode");
+    sfx.page();
+    setTimeout(() => { if (!document.body.classList.contains("tv-mode")) tvEl.hidden = true; }, 450);
+  }
+
+  function toggleTv() {
+    document.body.classList.contains("tv-mode") ? hideTv() : showTv();
+  }
+
+  $("tvMenu").addEventListener("click", hideTv);
+
+  // ---- Mute ----
+
+  const muteBtn = $("mute");
+  const paintMute = () => {
+    muteBtn.classList.toggle("muted", audio.muted);
+    muteBtn.setAttribute("aria-pressed", String(audio.muted));
+    muteBtn.setAttribute("aria-label", audio.muted ? "Unmute sound" : "Mute sound");
+  };
+  muteBtn.addEventListener("click", () => {
+    audio.setMuted(!audio.muted);
+    paintMute();
+    sfx.select();
+  });
+  paintMute();
 
   // ---- Input ----
 
@@ -416,11 +696,8 @@
     if (i >= 0) goTo(i);
   });
 
-  $("user").addEventListener("click", (e) => {
-    activate({ title: user.name, content: user.content }, e.currentTarget);
-  });
+  $("user").addEventListener("click", (e) => openRoute("about", e.currentTarget));
   hoverLabel($("user"), user.name);
-  $("launchClose").addEventListener("click", closeApp);
 
   // Swipe between pages
   let dragStart = null;
@@ -470,10 +747,18 @@
     goTo(page + (d > 0 ? 1 : -1));
   }, { passive: true });
 
-  // D-pad style keyboard navigation over the grid
+  // D-pad style keyboard navigation over the grid; Esc backs out of whatever is on top.
   document.addEventListener("keydown", (e) => {
     if (!launchEl.hidden) {
-      if (e.key === "Escape" || e.key === "Backspace") closeApp();
+      if (e.key === "Escape") back();
+      return;
+    }
+    if (!folderView.hidden) {
+      if (e.key === "Escape") closeFolder();
+      return;
+    }
+    if (document.body.classList.contains("tv-mode")) {
+      if (e.key === "Escape") hideTv();
       return;
     }
     const c = cols();
@@ -530,4 +815,9 @@
   });
 
   goTo(0, { sound: false });
+
+  // Deep link (#/contact, #/p/project-one) or the TV intro on first load
+  const initial = routeFromHash();
+  if (initial && routes[initial]) openRoute(initial, null, { push: false });
+  else if (config.startView === "tv") showTv();
 })();

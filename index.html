@@ -4,7 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#e8eeec">
-  <title>Wii U Menu</title>
+  <!-- Replace "Your Name" and the description with your own; og:image works best as a full URL once deployed -->
+  <title>Your Name · Portfolio</title>
+  <meta name="description" content="Portfolio of Your Name, presented as a Wii U Menu.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Your Name · Portfolio">
+  <meta property="og:description" content="Portfolio of Your Name, presented as a Wii U Menu.">
+  <meta property="og:image" content="media/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@400;500;700&display=swap" rel="stylesheet">
@@ -46,6 +54,14 @@
 
     <nav class="dots" id="dots" aria-label="Pages"></nav>
 
+    <button class="mute glass" id="mute" type="button" aria-label="Mute sound" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="speaker" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/>
+        <path class="waves" d="M15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11"/>
+        <path class="cross" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/>
+      </svg>
+    </button>
+
     <section class="viewport" id="viewport">
       <div class="track" id="track"></div>
     </section>
@@ -62,17 +78,46 @@
     <button class="corner-right glass" id="cornerRight" type="button"></button>
   </main>
 
+  <section class="tv" id="tv" aria-label="TV screen" hidden>
+    <div class="tv-hero glass">
+      <div class="mii-frame" id="tvMii"></div>
+      <h1 id="tvName"></h1>
+      <p id="tvTagline"></p>
+      <button class="pill primary" id="tvMenu" type="button">Open the Menu</button>
+    </div>
+    <div class="tv-bubbles" id="tvBubbles"></div>
+  </section>
+
+  <div class="folder-view" id="folderView" hidden>
+    <div class="folder-panel glass" role="dialog" aria-modal="true" aria-labelledby="folderTitle">
+      <header class="folder-head">
+        <span class="folder-swatch" id="folderSwatch" aria-hidden="true"></span>
+        <h2 id="folderTitle"></h2>
+        <button class="pill" id="folderClose" type="button">Close</button>
+      </header>
+      <div class="folder-grid" id="folderGrid"></div>
+    </div>
+  </div>
+
   <div class="launch" id="launch" role="dialog" aria-modal="true" aria-labelledby="launchTitle" hidden>
-    <div class="launch-bar">
+    <div class="launch-splash" id="launchSplash" aria-hidden="true"></div>
+    <header class="launch-bar">
+      <span class="launch-icon" id="launchIcon" aria-hidden="true"></span>
       <h1 class="launch-title" id="launchTitle"></h1>
-      <button class="launch-close" id="launchClose" type="button" aria-label="Close">
+    </header>
+    <div class="launch-body" id="launchBody"></div>
+    <footer class="launch-foot">
+      <button class="pill back" id="launchBack" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Back
+      </button>
+      <button class="home-btn" id="launchClose" type="button" aria-label="HOME Menu">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 11h3v9h4v-6h4v6h4v-9h3z"/></svg>
       </button>
-    </div>
-    <div class="launch-body" id="launchBody"></div>
+    </footer>
   </div>
 
   <script src="js/config.js"></script>
+  <script src="js/pages.js"></script>
   <script src="js/menu.js"></script>
 </body>
 </html>
