@@ -315,8 +315,10 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   position: relative;
   width: var(--tile);
   height: var(--tile);
-  transition: transform 0.3s var(--pop), box-shadow 0.3s;
+  transition: transform 0.3s var(--pop), box-shadow 0.3s, translate 0.2s var(--ease);
 }
+
+.page.current .slot.app:hover:not(.selected) { translate: 0 calc(var(--u) * -3); }
 
 /* Blurring through every off-screen frame is wasted work */
 .page:not(.current) .slot.glass {
@@ -427,6 +429,30 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 }
 
 .slot.app:not(.selected):active { transform: scale(0.95); }
+
+/* the selected frame breathes */
+.slot.glass.selected { animation: sel-glow 1.8s ease-in-out infinite alternate; }
+
+@keyframes sel-glow {
+  to {
+    box-shadow:
+      0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.85),
+      0 0 0 calc(var(--u) * 2.2) #1597b8,
+      inset 0 calc(var(--u) * 3) calc(var(--u) * 2) rgba(255, 255, 255, 0.7),
+      inset 0 calc(var(--u) * -6) calc(var(--u) * 9) rgba(0, 70, 100, 0.3),
+      0 0 calc(var(--u) * 34) rgba(30, 190, 230, 0.7),
+      0 calc(var(--u) * 14) calc(var(--u) * 22) rgba(0, 70, 100, 0.25);
+  }
+}
+
+/* changing page: the new page's tiles ripple in from the side you moved towards */
+.track.paging .page.current .slot { animation: page-in 0.45s var(--pop) backwards; }
+.track.paging[data-dir="next"] .page.current .slot { animation-delay: calc(var(--col) * 35ms); }
+.track.paging[data-dir="prev"] .page.current .slot { animation-delay: calc((4 - var(--col)) * 35ms); }
+
+@keyframes page-in {
+  from { opacity: 0.3; scale: 0.82; }
+}
 
 /* ---- Name bubble ---- */
 
@@ -575,6 +601,11 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 }
 
 .dock-item:hover { transform: translateY(calc(var(--u) * -5)); }
+.dock-item:hover > svg { animation: bob 0.55s ease-in-out infinite alternate; }
+
+@keyframes bob {
+  to { translate: 0 calc(var(--u) * -4); }
+}
 .dock-item:active,
 .corner-left:active,
 .corner-right:active { transform: scale(0.9); }
@@ -774,11 +805,12 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   display: flex;
   flex-direction: column;
   border-radius: calc(var(--u) * 30);
-  transform: scale(0.85);
-  transition: transform 0.35s var(--pop);
 }
 
-.folder-view.open .folder-panel { transform: scale(1); }
+.folder-view.open .folder-grid .slot {
+  animation: pop-in 0.45s var(--pop) backwards;
+  animation-delay: calc(0.18s + var(--n) * 40ms);
+}
 .folder-panel.glass::after { display: none; }
 
 .folder-head {
@@ -831,10 +863,22 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 
 /* ---- TV screen ---- */
 
-.menu > * { transition: opacity 0.4s; }
+.menu {
+  position: fixed;
+  inset: 0;
+  transition: transform 0.5s var(--ease), translate 0.55s var(--ease), opacity 0.4s;
+}
 
-body.tv-mode .menu > :not(.corner-right):not(.mute) {
+/* an app opening pushes the menu back a little */
+body.app-open .menu { transform: scale(0.94); }
+
+.bg { transition: transform 0.7s var(--ease); }
+body.app-open .bg { transform: scale(1.05); }
+
+/* switching screens: the menu slides down and away, the TV screen drops in from above */
+body.tv-mode .menu {
   opacity: 0;
+  translate: 0 calc(var(--u) * 50);
   pointer-events: none;
 }
 
@@ -843,15 +887,22 @@ body.tv-mode .menu > :not(.corner-right):not(.mute) {
   inset: 0;
   z-index: 7;
   opacity: 0;
+  translate: 0 calc(var(--u) * -50);
   pointer-events: none;
-  transition: opacity 0.45s;
+  transition: opacity 0.45s, translate 0.55s var(--ease);
 }
 
 .tv[hidden] { display: none; }
 
 body.tv-mode .tv {
   opacity: 1;
+  translate: 0 0;
   pointer-events: auto;
+}
+
+body.tv-mode .tv-bubble {
+  animation: pop-in 0.5s var(--pop) backwards, float 6s ease-in-out infinite alternate;
+  animation-delay: calc(0.25s + var(--i) * 80ms), calc(var(--i) * -1.3s);
 }
 
 .tv-hero {
@@ -957,20 +1008,41 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
 /* ---- App window ---- */
 
 .launch {
+  --app: #14bfd6;
+  --app-hi: #6fd8ee;
+  --app-lo: #0b8eab;
+  --app-tint: #eefafc;
   position: fixed;
   inset: 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
   background:
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.5) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0 2px, rgba(255, 255, 255, 0) 2px 14px),
     linear-gradient(180deg, #f6f8f8, #e7eeec);
   clip-path: inset(var(--t, 50%) var(--r, 50%) var(--b, 50%) var(--l, 50%) round var(--radius));
-  transition: clip-path 0.42s var(--ease);
+  /* closing: the content fades first, then the window shrinks back into its tile */
+  transition: clip-path 0.42s var(--ease) 0.1s;
+}
+
+/* each app tints itself with its theme colour */
+@supports (color: color-mix(in srgb, red, blue)) {
+  .launch {
+    --app-hi: color-mix(in srgb, var(--app) 55%, #ffffff);
+    --app-lo: color-mix(in srgb, var(--app) 80%, #000000);
+    --app-tint: color-mix(in srgb, var(--app) 9%, #ffffff);
+    background:
+      repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0 2px, rgba(255, 255, 255, 0) 2px 14px),
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 70%),
+      linear-gradient(180deg, var(--app-tint), color-mix(in srgb, var(--app) 15%, #e6ecea));
+  }
 }
 
 .launch[hidden] { display: none; }
-.launch.open { clip-path: inset(0 0 0 0 round 0); }
+.launch.open {
+  clip-path: inset(0 0 0 0 round 0);
+  transition-delay: 0s;
+}
 
 /* The tile's art flashes in the middle while the window opens, like a launch screen */
 .launch-splash {
@@ -1014,9 +1086,23 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(238, 243, 242, 0.7) 51%, rgba(246, 249, 248, 0.9) 100%);
   opacity: 0;
-  transition: opacity 0.25s 0.45s;
+  transition: opacity 0.15s;
   z-index: 2;
 }
+
+/* theme stripe under the title bar and over the button bar */
+.launch-bar::after,
+.launch-foot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--app-hi), var(--app) 50%, var(--app-hi));
+}
+
+.launch-bar::after { bottom: -1px; }
+.launch-foot::before { top: -1px; }
 
 .launch-bar {
   min-height: 72px;
@@ -1078,7 +1164,33 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
 .home-btn svg {
   width: 26px;
   height: 26px;
-  fill: var(--accent);
+  fill: var(--app);
+}
+
+.launch .pill.primary {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0) 51%),
+    linear-gradient(180deg, var(--app-hi), var(--app));
+  box-shadow:
+    0 0 0 1px var(--app-lo),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.18),
+    0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+/* Back: the round button glyph, Wii U style */
+.pill.back { padding-left: 8px; }
+
+.pill.back svg {
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  border-radius: 50%;
+  stroke: #ffffff;
+  stroke-width: 3;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%),
+    var(--app);
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .launch-body {
@@ -1091,12 +1203,29 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
   user-select: text;
   -webkit-user-select: text;
   opacity: 0;
-  transition: opacity 0.25s 0.45s;
+  transition: opacity 0.15s;
 }
 
 .launch.open .launch-bar,
 .launch.open .launch-foot,
-.launch.open .launch-body { opacity: 1; }
+.launch.open .launch-body {
+  opacity: 1;
+  transition: opacity 0.3s 0.38s;
+}
+
+/* cards rise in one after another; when moving between pages they slide in sideways */
+.launch.open .rise {
+  animation: rise 0.5s var(--ease) both;
+  animation-delay: calc(0.42s + var(--n) * 45ms);
+}
+
+.launch.open .launch-body.swapping .rise { animation-delay: calc(var(--n) * 40ms); }
+.launch.open .launch-body.swapping[data-dir="fwd"] .rise { animation-name: rise-from-right; }
+.launch.open .launch-body.swapping[data-dir="back"] .rise { animation-name: rise-from-left; }
+
+@keyframes rise { from { opacity: 0; translate: 0 18px; } }
+@keyframes rise-from-right { from { opacity: 0; translate: 44px 0; } }
+@keyframes rise-from-left { from { opacity: 0; translate: -44px 0; } }
 
 .launch-body > * {
   max-width: 960px;
@@ -1108,7 +1237,7 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
 .launch-body p:last-child { margin-bottom: 0; }
 .launch-body h2 { margin: 0 0 4px; font-size: 28px; font-weight: 500; line-height: 1.25; }
 .launch-body h3 { margin: 0 0 8px; font-size: 18px; font-weight: 500; }
-.launch-body a:not(.pill):not(.row):not(.card) { color: #0e8fb0; }
+.launch-body a:not(.pill):not(.row):not(.card) { color: var(--app-lo); }
 .launch-body .meta { margin: 0 0 14px; color: #6a7473; font-size: 15px; }
 
 /* ---- Page building blocks ---- */
@@ -1149,9 +1278,9 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
   padding: 4px 14px;
   border-radius: 999px;
   font-size: 14px;
-  color: #0b7d98;
-  background: linear-gradient(180deg, #e9fafd, #d3f1f8);
-  box-shadow: 0 0 0 1px rgba(20, 170, 200, 0.35), inset 0 1px 0 #ffffff;
+  color: var(--app-lo, #0b7d98);
+  background: linear-gradient(180deg, #ffffff, var(--app-tint, #d3f1f8));
+  box-shadow: 0 0 0 1px var(--app-hi, rgba(20, 170, 200, 0.35)), inset 0 1px 0 #ffffff;
 }
 
 .actions {
@@ -1277,9 +1406,24 @@ a.row:active { transform: scale(0.98); }
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0) 51%),
-    var(--c, #14bfd6);
+    var(--c, var(--app));
   box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.18), 0 2px 5px rgba(0, 0, 0, 0.15);
 }
+
+/* link rows end in a chevron, like a settings list */
+.row.go::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-top: 3px solid #a3adac;
+  border-right: 3px solid #a3adac;
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+a.row:hover { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.95), 0 0 0 2px var(--app-hi), inset 0 -3px 8px rgba(95, 130, 120, 0.1), 0 8px 18px rgba(30, 62, 52, 0.14); }
 
 .badge-icon.globe { --c: #2c74e8; }
 .badge-icon.file { --c: #e9505c; font-size: 13px; }
@@ -1292,9 +1436,12 @@ a.row:active { transform: scale(0.98); }
   height: 12px;
   margin-top: 6px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #2ad3e4, #0bb8ce);
-  box-shadow: 0 0 6px rgba(20, 200, 220, 0.6);
+  background: linear-gradient(180deg, var(--app-hi), var(--app));
+  box-shadow: 0 0 6px var(--app-hi);
+  animation: blink 1.4s ease-in-out infinite alternate;
 }
+
+@keyframes blink { to { opacity: 0.45; } }
 
 /* Blog posts, Miiverse style */
 .post header {
@@ -1411,6 +1558,45 @@ a.row:active { transform: scale(0.98); }
 }
 
 body.tv-mode .corner-right { z-index: 9; }
+
+/* ---- Start-up ---- */
+
+/* a white screen that fades into the menu */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: #ffffff;
+  pointer-events: none;
+  animation: boot-flash 0.8s ease-out 0.1s both;
+}
+
+@keyframes boot-flash { to { opacity: 0; visibility: hidden; } }
+
+body.booting .page.current .slot {
+  animation: pop-in 0.55s var(--pop) backwards;
+  animation-delay: calc(0.3s + var(--n) * 30ms);
+}
+
+body.booting .page:not(.current) .slot { animation: fade-in 0.6s 0.6s backwards; }
+
+body.booting .dock-item {
+  animation: rise-in 0.5s var(--pop) backwards;
+  animation-delay: calc(0.5s + var(--n) * 50ms);
+}
+
+body.booting .user,
+body.booting .mute,
+body.booting .corner-left,
+body.booting .corner-right { animation: pop-in 0.5s var(--pop) 0.25s backwards; }
+
+body.booting .dots,
+body.booting .arrow:not(.off) { animation: fade-in 0.6s 0.5s backwards; }
+
+@keyframes pop-in { from { opacity: 0; scale: 0.6; } }
+@keyframes rise-in { from { opacity: 0; translate: 0 calc(var(--u) * 30); } }
+@keyframes fade-in { from { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

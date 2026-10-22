@@ -327,11 +327,17 @@
   const slug = (s) =>
     String(s || "item").toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_]+/g, "-") || "item";
 
-  routes.about = { title: user.name || "About Me", icon: avatarMarkup(), render: () => Pages.about(user) };
+  // Each app window takes a theme colour, like the console's own apps
+  const PAGE_COLORS = {
+    about: "#14bfd6", contact: "#f28c26", blog: "#4cb51c", services: "#f39a12", links: "#2c74e8",
+    videos: "#e3202b", news: "#14b3c7", downloads: "#1f86e8", credits: "#7b8786",
+  };
+  routes.about = { title: user.name || "About Me", icon: avatarMarkup(), color: PAGE_COLORS.about, render: () => Pages.about(user) };
   Object.keys(Pages.builtIn).forEach((name) => {
     routes[name] = {
       title: PAGE_TITLES[name] || name,
       icon: "",
+      color: PAGE_COLORS[name],
       render: () => Pages.builtIn[name]((config.pages || {})[name] || {}, user),
     };
   });
@@ -351,6 +357,7 @@
       routes[id] = {
         title: item.title || "",
         icon: Pages.tileArt(item),
+        color: item.color,
         render: () => (item.content != null ? item.content : Pages.project(item)),
       };
       routeOf.set(item, id);
@@ -369,7 +376,10 @@
     pageEl.style.left = `calc(var(--page-pitch) * ${p} - var(--grid-w) / 2)`;
     for (let i = 0; i < PER_PAGE; i++) {
       const index = p * PER_PAGE + i;
-      pageEl.appendChild(makeSlot(apps[index], index));
+      const slot = makeSlot(apps[index], index);
+      slot.style.setProperty("--n", i);
+      slot.style.setProperty("--col", i % cols());
+      pageEl.appendChild(slot);
     }
     track.appendChild(pageEl);
     pages.push(pageEl);
@@ -404,6 +414,7 @@
     btn.innerHTML = iconMarkup(item);
     hoverLabel(btn, item.title);
     btn.addEventListener("click", () => activate(item, btn));
+    btn.style.setProperty("--n", dock.children.length);
     dock.appendChild(btn);
   });
 
@@ -447,6 +458,14 @@
       if (sound) sfx.page();
       if (!keepSelection) select(-1, { sound: false });
     }
+    if (next !== page && !reduceMotion) {
+      track.dataset.dir = next > page ? "next" : "prev";
+      track.classList.remove("paging");
+      void track.offsetWidth;
+      track.classList.add("paging");
+      clearTimeout(goTo.timer);
+      goTo.timer = setTimeout(() => track.classList.remove("paging"), 700);
+    }
     page = next;
     track.style.transform = `translateX(calc(var(--page-pitch) * ${-page}))`;
     pages.forEach((el, i) => el.classList.toggle("current", i === page));
@@ -462,7 +481,12 @@
   }
 
   // Whatever a tile, dock icon or bubble points at: a folder, a page, a link or the TV screen.
+  function press(el) {
+    if (el && !reduceMotion && el.animate) el.animate([{ scale: 1 }, { scale: 0.9 }, { scale: 1 }], { duration: 260, easing: "ease-out" });
+  }
+
   function activate(item, el) {
+    if (item.page || item.url || isFolder(item) || routeOf.has(item)) press(el);
     if (isFolder(item)) return openFolder(item, el);
     if (item.action === "tv") return toggleTv();
     if (item.page === "menu") return hideTv();
@@ -483,14 +507,47 @@
   let stack = [];
   let closeTimer = 0;
 
+  const RISE = ".launch-body > *, .project > *, .about > *, .list > li, .posts > *, .shop-grid > *, .videos > *, .gallery > *";
+
   function render(id) {
     const route = routes[id];
+    launchEl.style.setProperty("--app", route.color || "#14bfd6");
     launchTitle.textContent = route.title;
     launchIcon.innerHTML = route.icon || "";
     launchBody.innerHTML = route.render();
     launchBody.scrollTop = 0;
+    // cards rise in one after another
+    launchEl.querySelectorAll(RISE).forEach((el, i) => {
+      el.classList.add("rise");
+      el.style.setProperty("--n", Math.min(i, 10));
+    });
     Pages.mount(launchBody);
     document.title = `${route.title} · ${user.name || "Portfolio"}`;
+  }
+
+  // Moving between pages inside the window: old content slides away, new content slides in.
+  let swapToken = 0;
+  function swapTo(id, dir) {
+    const token = ++swapToken;
+    const done = () => {
+      if (token !== swapToken) return;
+      launchBody.dataset.dir = dir;
+      launchBody.classList.add("swapping");
+      render(id);
+    };
+    if (reduceMotion || !launchBody.animate) return done();
+    const shift = dir === "back" ? 40 : -40;
+    const out = { duration: 160, easing: "ease-in", fill: "forwards" };
+    [launchBody, launchTitle, launchIcon].forEach((el) =>
+      el.animate([{ opacity: 1, translate: "0 0" }, { opacity: 0, translate: `${shift}px 0` }], out)
+    );
+    setTimeout(() => {
+      [launchBody, launchTitle, launchIcon].forEach((el) => el.getAnimations().forEach((a) => a.cancel()));
+      done();
+      [launchTitle, launchIcon].forEach((el) =>
+        el.animate([{ opacity: 0, translate: `${-shift}px 0` }, { opacity: 1, translate: "0 0" }], { duration: 260, easing: "cubic-bezier(0.2, 0.8, 0.2, 1)" })
+      );
+    }, 160);
   }
 
   function openRoute(id, fromEl, { push = true } = {}) {
@@ -498,11 +555,14 @@
     if (id === current) return;
     clearTimeout(closeTimer);
     hoverBubble.remove();
-    render(id);
     if (!launchEl.hidden && launchEl.classList.contains("open")) {
+      swapTo(id, "fwd");
       stack.push(id);
       sfx.select();
     } else {
+      launchBody.classList.remove("swapping");
+      launchBody.dataset.dir = "";
+      render(id);
       stack = [id];
       openFrom = fromEl || null;
       const r = fromEl
@@ -518,6 +578,7 @@
       launchEl.classList.remove("open");
       void launchEl.offsetWidth;
       launchEl.classList.add("open");
+      document.body.classList.add("app-open");
       sfx.open();
       if (fromEl) $("launchClose").focus({ preventScroll: true });
     }
@@ -529,6 +590,7 @@
     if (launchEl.hidden) return;
     sfx.back();
     launchEl.classList.remove("open");
+    document.body.classList.remove("app-open");
     current = null;
     stack = [];
     document.title = `${user.name || "Your Name"} · Portfolio`;
@@ -553,7 +615,7 @@
     if (id === current) return;
     if (stack.length > 1 && stack[stack.length - 2] === id) {
       stack.pop();
-      render(id);
+      swapTo(id, "back");
       current = id;
       sfx.back();
       return;
@@ -579,27 +641,53 @@
     $("folderTitle").textContent = item.title || "";
     $("folderSwatch").style.setProperty("--c", item.color || "#9a9a9a");
     folderGrid.innerHTML = "";
-    folderItems.forEach((app, i) => folderGrid.appendChild(makeSlot(app, i)));
+    folderItems.forEach((app, i) => {
+      const slot = makeSlot(app, i);
+      slot.style.setProperty("--n", i);
+      folderGrid.appendChild(slot);
+    });
     if (!folderItems.length) folderGrid.innerHTML = '<p class="folder-empty">This folder is empty.</p>';
     bubble.remove();
     folderView.hidden = false;
     void folderView.offsetWidth;
     folderView.classList.add("open");
+    morph(folderPanel, el, false);
     sfx.open();
     $("folderClose").focus({ preventScroll: true });
+  }
+
+  const folderPanel = folderView.querySelector(".folder-panel");
+
+  // Animates the panel between the tile's box and its own (reverse = back into the tile).
+  function morph(panel, tile, reverse) {
+    if (reduceMotion || !tile || !panel.animate) return null;
+    const a = tile.getBoundingClientRect();
+    const b = panel.getBoundingClientRect();
+    const from = {
+      transform: `translate(${a.left + a.width / 2 - (b.left + b.width / 2)}px, ${a.top + a.height / 2 - (b.top + b.height / 2)}px) scale(${a.width / b.width}, ${a.height / b.height})`,
+      opacity: 0.3,
+    };
+    const to = { transform: "none", opacity: 1 };
+    return panel.animate(reverse ? [to, from] : [from, to], {
+      duration: reverse ? 260 : 420,
+      easing: reverse ? "cubic-bezier(0.4, 0, 0.8, 0.4)" : "cubic-bezier(0.34, 1.25, 0.64, 1)",
+      fill: reverse ? "forwards" : "none",
+    });
   }
 
   function closeFolder() {
     if (folderView.hidden) return;
     sfx.back();
+    const shrink = morph(folderPanel, folderFrom && document.contains(folderFrom) ? folderFrom : null, true);
     folderView.classList.remove("open");
     folderItems = [];
     setTimeout(() => {
+      if (shrink) shrink.cancel();
       folderView.hidden = true;
       folderGrid.innerHTML = "";
       if (selected >= 0) select(selected, { sound: false });
       if (folderFrom && document.contains(folderFrom)) folderFrom.focus({ preventScroll: true });
-    }, 250);
+    }, 270);
   }
 
   folderGrid.addEventListener("click", (e) => {
@@ -815,6 +903,12 @@
   });
 
   goTo(0, { sound: false });
+
+  // Start-up: tiles pop in, dock icons rise, like the console booting into the menu
+  if (!reduceMotion) {
+    document.body.classList.add("booting");
+    setTimeout(() => document.body.classList.remove("booting"), 1800);
+  }
 
   // Deep link (#/contact, #/p/project-one) or the TV intro on first load
   const initial = routeFromHash();

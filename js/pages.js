@@ -149,7 +149,7 @@ window.WiiPages = (() => {
       list
         .map(
           (l) =>
-            `<li><a class="row card" href="${esc(l.url)}"${external(l.url)}>` +
+            `<li><a class="row card go" href="${esc(l.url)}"${external(l.url)}>` +
             `<span class="badge-icon globe">${initial(l.title || host(l.url))}</span>` +
             `<span class="row-text"><strong>${esc(l.title || host(l.url))}</strong><small>${esc(host(l.url))}${l.note ? ` · ${esc(l.note)}` : ""}</small></span>` +
             "</a></li>"
