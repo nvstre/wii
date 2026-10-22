@@ -175,35 +175,6 @@
     '<path d="M42 58q6 4 12 0" fill="none" stroke="#b5584f" stroke-width="2.2" stroke-linecap="round"/>' +
     "</svg>";
 
-  // Background hardware: the first shape is the body, "detail" shapes are drawn on top of it.
-  const GHOST_ART = {
-    pad: ["0 0 320 180", '<rect x="4" y="4" width="312" height="172" rx="60"/><rect class="detail" x="88" y="30" width="144" height="100" rx="8"/><circle class="detail" cx="44" cy="62" r="18"/><circle class="detail" cx="276" cy="62" r="18"/><path class="detail" d="M32 116h24M44 104v24"/><circle class="detail" cx="276" cy="116" r="8"/>'],
-    remote: ["0 0 80 300", '<rect x="4" y="4" width="72" height="292" rx="30"/><circle class="detail" cx="40" cy="72" r="14"/><path class="detail" d="M28 34h24M40 22v24"/><circle class="detail" cx="40" cy="200" r="7"/><circle class="detail" cx="40" cy="226" r="7"/>'],
-    disc: ["0 0 200 200", '<circle cx="100" cy="100" r="96"/><circle class="detail" cx="100" cy="100" r="20"/>'],
-    button: ["0 0 160 70", '<rect x="4" y="4" width="152" height="62" rx="31"/>'],
-    stylus: ["0 0 30 260", '<rect x="4" y="4" width="22" height="252" rx="11"/>'],
-  };
-
-  // z: 0 = far and sharp, 1 = near, blurry and moving most with the pointer
-  const GHOSTS = [
-    { art: "pad", x: 66, y: 2, w: 360, r: 14, z: 0.9, dx: -30, dy: 20, t: 46 },
-    { art: "remote", x: 1, y: 28, w: 70, r: -38, z: 0.6, dx: 25, dy: -25, t: 38 },
-    { art: "disc", x: 18, y: -14, w: 230, r: 0, z: 1, dx: 30, dy: 15, t: 52 },
-    { art: "button", x: 83, y: 36, w: 170, r: 28, z: 0.5, dx: -20, dy: 25, t: 34 },
-    { art: "stylus", x: 47, y: 68, w: 26, r: 62, z: 0.2, dx: 40, dy: -10, t: 42 },
-    { art: "pad", x: 6, y: 74, w: 220, r: -16, z: 0.4, dx: 30, dy: -20, t: 48 },
-    { art: "remote", x: 88, y: 70, w: 60, r: 20, z: 0.7, dx: -20, dy: -30, t: 40 },
-  ];
-
-  const ghostSvg = (art, id) => {
-    const [viewBox, body] = GHOST_ART[art];
-    return (
-      `<svg viewBox="${viewBox}"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">` +
-      '<stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#eef4f2"/><stop offset="1" stop-color="#cbd9d3"/>' +
-      `</linearGradient></defs><g fill="url(#${id})">${body}</g></svg>`
-    );
-  };
-
   const glyphSvg = (name) =>
     `<svg viewBox="${GLYPH_VIEWBOX[name] || "0 0 80 80"}" aria-hidden="true">${GLYPHS[name]}</svg>`;
 
@@ -222,28 +193,48 @@
 
   // ---- Build ----
 
+  // Background: two copies of the video crossfade near the end, so the loop has no visible jump.
   const bg = $("bg");
-  GHOSTS.forEach((g, i) => {
-    const el = document.createElement("div");
-    el.className = "ghost";
-    el.innerHTML = `<div class="ghost-in">${ghostSvg(g.art, `ghost-${i}`)}</div>`;
-    el.style.cssText =
-      `left:${g.x}%;top:${g.y}%;--w:calc(var(--u) * ${g.w});--r:${g.r}deg;--z:${g.z};--dx:${g.dx};--dy:${g.dy};--t:${g.t}s`;
-    bg.appendChild(el);
-  });
-
-  // Parallax: nearer shapes shift further as the pointer moves
+  const videos = Array.from(bg.querySelectorAll("video"));
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (window.matchMedia("(pointer: fine)").matches && !reduceMotion) {
-    let frame = 0;
-    window.addEventListener("pointermove", (e) => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        bg.style.setProperty("--px", ((e.clientX / window.innerWidth) * 2 - 1).toFixed(3));
-        bg.style.setProperty("--py", ((e.clientY / window.innerHeight) * 2 - 1).toFixed(3));
+  if (config.backgroundPoster) bg.style.background = `url("${config.backgroundPoster}") center / cover`;
+  const VIDEO_TYPES = { webm: 'video/webm; codecs="vp9"', mp4: 'video/mp4; codecs="avc1.640028"' };
+  const sources = [].concat(config.background || []).filter((src) => {
+    const type = VIDEO_TYPES[src.split(".").pop().toLowerCase()];
+    return !type || videos[0].canPlayType(type) !== "";
+  });
+  if (!sources.length || reduceMotion) {
+    videos.forEach((v) => v.remove());
+  } else {
+    const FADE = 1.5;
+    let active = videos[0];
+    const swap = () => {
+      const next = videos.find((v) => v !== active);
+      next.currentTime = 0;
+      next.play().catch(() => {});
+      next.classList.add("on");
+      active.classList.remove("on");
+      const old = active;
+      active = next;
+      setTimeout(() => old.pause(), FADE * 1000 + 200);
+    };
+    // A missing or broken file falls through to the next format
+    let source = 0;
+    const useSource = () => videos.forEach((v) => { v.src = sources[source]; });
+    videos[0].addEventListener("error", () => {
+      if (++source >= sources.length) return videos.forEach((v) => v.remove());
+      useSource();
+      active.play().catch(() => {});
+    });
+    useSource();
+    videos.forEach((v) => {
+      v.addEventListener("timeupdate", () => {
+        if (v === active && v.duration && v.currentTime > v.duration - FADE) swap();
       });
-    }, { passive: true });
+      v.addEventListener("ended", () => { if (v === active) swap(); });
+    });
+    active.addEventListener("playing", () => active.classList.add("on"), { once: true });
+    active.play().catch(() => {});
   }
 
   const user = config.user || {};

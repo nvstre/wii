@@ -110,48 +110,26 @@ button {
 button:focus { outline: none; }
 button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-offset: calc(var(--u) * 4); }
 
-/* ---- Floating hardware in the background, out of focus at different depths ---- */
+/* ---- Background video: two copies crossfade so the loop point never jumps ---- */
 
 .bg {
   position: fixed;
-  inset: -4%;
+  inset: 0;
   pointer-events: none;
   overflow: hidden;
-  --px: 0;
-  --py: 0;
 }
 
-.ghost {
+.bg-video {
   position: absolute;
-  width: var(--w);
-  transform: translate(calc(var(--px) * var(--z) * var(--u) * -40), calc(var(--py) * var(--z) * var(--u) * -28));
-  transition: transform 1.2s var(--ease);
-}
-
-.ghost-in {
-  opacity: calc(0.5 + var(--z) * 0.35);
-  filter: drop-shadow(0 calc(var(--u) * 10) calc(var(--u) * 10) rgba(40, 80, 66, 0.16)) blur(calc(var(--u) * (2 + var(--z) * 5)));
-  transform: rotate(var(--r));
-  animation: drift var(--t, 40s) ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-.ghost svg {
-  display: block;
+  inset: 0;
   width: 100%;
-  height: auto;
-  stroke: rgba(255, 255, 255, 0.95);
-  stroke-width: 3;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1.5s linear;
 }
 
-.ghost svg .detail {
-  fill: rgba(220, 232, 228, 0.7);
-  stroke: rgba(160, 182, 174, 0.55);
-}
-
-@keyframes drift {
-  to { transform: translate(calc(var(--u) * var(--dx, 30)), calc(var(--u) * var(--dy, -20))) rotate(calc(var(--r) + 6deg)); }
-}
+.bg-video.on { opacity: 1; }
 
 /* ---- Glass ---- */
 

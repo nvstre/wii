@@ -21,6 +21,9 @@ const TYPES = {
   ".mp3": "audio/mpeg",
   ".ogg": "audio/ogg",
   ".wav": "audio/wav",
+  ".m4a": "audio/mp4",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
   ".woff2": "font/woff2",
 };
 
@@ -33,16 +36,35 @@ http
       return;
     }
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
-    fs.readFile(file, (err, data) => {
-      if (err) {
+    fs.stat(file, (err, stat) => {
+      if (err || !stat.isFile()) {
         res.writeHead(404, { "Content-Type": "text/plain" }).end("Not found");
         return;
       }
-      res.writeHead(200, {
+      const headers = {
         "Content-Type": TYPES[path.extname(file).toLowerCase()] || "application/octet-stream",
+        "Accept-Ranges": "bytes",
         "Cache-Control": "no-store",
-      });
-      res.end(data);
+      };
+
+      // Byte ranges, so video can stream and seek (Safari won't play video without them)
+      const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || "");
+      if (range && (range[1] || range[2])) {
+        let start = range[1] ? Number(range[1]) : stat.size - Number(range[2]);
+        let end = range[1] && range[2] ? Number(range[2]) : stat.size - 1;
+        start = Math.max(0, start);
+        end = Math.min(end, stat.size - 1);
+        if (start > end) {
+          res.writeHead(416, { "Content-Range": `bytes */${stat.size}` }).end();
+          return;
+        }
+        res.writeHead(206, { ...headers, "Content-Range": `bytes ${start}-${end}/${stat.size}`, "Content-Length": end - start + 1 });
+        fs.createReadStream(file, { start, end }).pipe(res);
+        return;
+      }
+
+      res.writeHead(200, { ...headers, "Content-Length": stat.size });
+      fs.createReadStream(file).pipe(res);
     });
   })
   .listen(port, () => console.log(`Wii U Menu running at http://localhost:${port}`));

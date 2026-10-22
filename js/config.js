@@ -10,6 +10,10 @@ window.WIIU_CONFIG = {
   sounds: true,            // synthesized UI blips
   music: null,             // path to your own looping audio file, e.g. "audio/menu.mp3"
 
+  // Looping background video (first format the browser can play), or null for a plain gradient
+  background: ["media/background.webm", "media/background.mp4"],
+  backgroundPoster: "media/background.jpg",  // still frame shown while it loads (and with reduced motion)
+
   // Grid tiles, filled in order, 15 per page. Each one can have:
   //   title    name shown in the bubble when selected
   //   icon     square image path, or
