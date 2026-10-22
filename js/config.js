@@ -2,7 +2,7 @@
 window.WIIU_CONFIG = {
   user: {
     name: "Guest",
-    avatar: null,          // path to an image, or null for the default face
+    avatar: "img/avatar.png", // path to an image, or null for the default face
     content: null,         // HTML shown when the user icon is opened, or null to do nothing
   },
 

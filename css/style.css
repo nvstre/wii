@@ -24,7 +24,22 @@
 
   --accent: #14bfd6;
   --ink: #3a3a3a;
-  --glass-edge: rgba(150, 166, 162, 0.55);
+
+  /* Glass recipe shared by frames, the user icon, the bubble and the corner ring */
+  --glass-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 251, 250, 0.52) 48%, rgba(228, 238, 235, 0.46) 100%);
+  --glass-blur: blur(calc(var(--u) * 8)) saturate(1.6) brightness(1.05);
+  --glass-gloss: radial-gradient(150% 120% at 50% -60%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.28) 89%, rgba(255, 255, 255, 0) 90%);
+  --glass-rim:
+    0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.95),
+    0 0 0 calc(var(--u) * 2.2) rgba(115, 142, 134, 0.32);
+  --glass-bevel:
+    inset 0 calc(var(--u) * 3) calc(var(--u) * 2) rgba(255, 255, 255, 0.95),
+    inset 0 calc(var(--u) * -6) calc(var(--u) * 9) rgba(95, 130, 120, 0.22),
+    inset calc(var(--u) * 3) 0 calc(var(--u) * 4) rgba(255, 255, 255, 0.55),
+    inset calc(var(--u) * -3) 0 calc(var(--u) * 4) rgba(140, 168, 160, 0.18);
+  --glass-drop:
+    0 calc(var(--u) * 9) calc(var(--u) * 18) rgba(30, 62, 52, 0.17),
+    0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(30, 62, 52, 0.14);
 
   --pop: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -72,10 +87,12 @@ body {
   font-family: "M PLUS 1p", "Rodin", "Hiragino Sans", "Segoe UI", system-ui, sans-serif;
   color: var(--ink);
   background:
+    radial-gradient(ellipse 70% 45% at 50% -8%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0) 100%),
     radial-gradient(ellipse 60% 55% at 88% 25%, #fbfcfd 0%, rgba(251, 252, 253, 0) 100%),
-    radial-gradient(ellipse 45% 50% at 85% 85%, #f6fbfb 0%, rgba(246, 251, 251, 0) 100%),
-    radial-gradient(ellipse 40% 45% at 5% 90%, #dcebe2 0%, rgba(220, 235, 226, 0) 100%),
-    linear-gradient(135deg, #d9e4df 0%, #e6ecea 35%, #edf2f1 70%, #f3f7f7 100%);
+    radial-gradient(ellipse 45% 50% at 85% 85%, #f4fbfb 0%, rgba(244, 251, 251, 0) 100%),
+    radial-gradient(ellipse 45% 50% at 4% 88%, #d6eadd 0%, rgba(214, 234, 221, 0) 100%),
+    radial-gradient(ellipse 40% 40% at 0% 10%, #d3e1db 0%, rgba(211, 225, 219, 0) 100%),
+    linear-gradient(135deg, #dce6e1 0%, #e6ecea 35%, #edf2f1 70%, #f3f7f7 100%);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
@@ -93,20 +110,27 @@ button {
 button:focus { outline: none; }
 button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-offset: calc(var(--u) * 4); }
 
-/* ---- Floating hardware ghosts in the background ---- */
+/* ---- Floating hardware in the background, out of focus at different depths ---- */
 
 .bg {
   position: fixed;
-  inset: 0;
+  inset: -4%;
   pointer-events: none;
   overflow: hidden;
+  --px: 0;
+  --py: 0;
 }
 
 .ghost {
   position: absolute;
   width: var(--w);
-  opacity: 0.6;
-  filter: blur(calc(var(--u) * 3.5));
+  transform: translate(calc(var(--px) * var(--z) * var(--u) * -40), calc(var(--py) * var(--z) * var(--u) * -28));
+  transition: transform 1.2s var(--ease);
+}
+
+.ghost-in {
+  opacity: calc(0.5 + var(--z) * 0.35);
+  filter: drop-shadow(0 calc(var(--u) * 10) calc(var(--u) * 10) rgba(40, 80, 66, 0.16)) blur(calc(var(--u) * (2 + var(--z) * 5)));
   transform: rotate(var(--r));
   animation: drift var(--t, 40s) ease-in-out infinite alternate;
   will-change: transform;
@@ -116,26 +140,51 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   display: block;
   width: 100%;
   height: auto;
-  fill: rgba(255, 255, 255, 0.55);
-  stroke: rgba(170, 186, 181, 0.32);
-  stroke-width: 4;
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 3;
+}
+
+.ghost svg .detail {
+  fill: rgba(220, 232, 228, 0.7);
+  stroke: rgba(160, 182, 174, 0.55);
 }
 
 @keyframes drift {
   to { transform: translate(calc(var(--u) * var(--dx, 30)), calc(var(--u) * var(--dy, -20))) rotate(calc(var(--r) + 6deg)); }
 }
 
-/* ---- Shared glass frame ---- */
+/* ---- Glass ---- */
 
 .glass {
   border-radius: var(--radius);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(250, 252, 252, 0.72) 45%, rgba(236, 242, 241, 0.68) 62%, rgba(245, 248, 247, 0.8) 100%);
-  box-shadow:
-    0 0 0 calc(var(--u) * 1.5) var(--glass-edge),
-    inset 0 calc(var(--u) * 2) calc(var(--u) * 1) rgba(255, 255, 255, 0.95),
-    inset 0 calc(var(--u) * -2) calc(var(--u) * 4) rgba(120, 140, 135, 0.18),
-    0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(60, 85, 80, 0.12);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-rim), var(--glass-bevel), var(--glass-drop);
+}
+
+/* curved specular reflection across the top half */
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-gloss);
+  pointer-events: none;
+}
+
+/* corner glint */
+.glass::after {
+  content: "";
+  position: absolute;
+  left: 6%;
+  top: 5%;
+  width: 10%;
+  height: 10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffffff 0 30%, rgba(255, 255, 255, 0.6) 45%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+  z-index: 3;
 }
 
 /* ---- User icon (top left) ---- */
@@ -147,13 +196,6 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   width: calc(var(--u) * 110);
   height: calc(var(--u) * 110);
   border-radius: calc(var(--u) * 18);
-  background:
-    radial-gradient(circle at 18% 14%, #ffffff 0 calc(var(--u) * 3), rgba(255, 255, 255, 0) calc(var(--u) * 4)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(235, 240, 239, 0.7));
-  box-shadow:
-    0 0 0 calc(var(--u) * 1.5) var(--glass-edge),
-    inset 0 calc(var(--u) * 2) calc(var(--u) * 1) rgba(255, 255, 255, 0.95),
-    0 calc(var(--u) * 4) calc(var(--u) * 10) rgba(60, 85, 80, 0.14);
   transition: transform 0.2s var(--pop);
   z-index: 4;
 }
@@ -165,7 +207,18 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   inset: calc(var(--u) * 7);
   border-radius: calc(var(--u) * 12);
   overflow: hidden;
-  background: linear-gradient(180deg, #e9ecec, #cfd5d4);
+  background: linear-gradient(180deg, #eef1f1 0%, #d6dcdb 100%);
+  box-shadow:
+    inset 0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(80, 110, 100, 0.25),
+    0 calc(var(--u) * 1) 0 rgba(255, 255, 255, 0.9);
+  z-index: 1;
+}
+
+.user-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(150% 120% at 50% -60%, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.1) 89%, rgba(255, 255, 255, 0) 90%);
 }
 
 .user-avatar img,
@@ -174,6 +227,8 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   height: 100%;
   display: block;
   object-fit: cover;
+  transform: scale(1.12);
+  transform-origin: 50% 35%;
 }
 
 .badge {
@@ -182,11 +237,17 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   right: calc(var(--u) * -10);
   width: calc(var(--u) * 37);
   height: calc(var(--u) * 37);
-  border-radius: calc(var(--u) * 7);
-  background: linear-gradient(180deg, #ff9640, #ef7218);
-  box-shadow: 0 calc(var(--u) * 1) calc(var(--u) * 3) rgba(150, 60, 0, 0.35);
+  border-radius: calc(var(--u) * 8);
+  background:
+    radial-gradient(150% 120% at 50% -60%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.15) 89%, rgba(255, 255, 255, 0) 90%),
+    linear-gradient(180deg, #ffa04d, #ec6c12);
+  box-shadow:
+    inset 0 calc(var(--u) * 1) 0 rgba(255, 255, 255, 0.6),
+    inset 0 calc(var(--u) * -2) calc(var(--u) * 2) rgba(150, 50, 0, 0.3),
+    0 calc(var(--u) * 2) calc(var(--u) * 4) rgba(150, 60, 0, 0.35);
   display: grid;
   place-items: center;
+  z-index: 4;
 }
 
 .badge svg { width: 78%; height: 78%; }
@@ -216,7 +277,8 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   width: calc(var(--u) * 13);
   height: calc(var(--u) * 10);
   border-radius: calc(var(--u) * 3);
-  background: #b6b9b8;
+  background: linear-gradient(180deg, #a9adac, #bfc3c2);
+  box-shadow: inset 0 calc(var(--u) * 1) calc(var(--u) * 1) rgba(0, 0, 0, 0.15), 0 calc(var(--u) * 1) 0 rgba(255, 255, 255, 0.9);
   transition: width 0.25s var(--ease), height 0.25s var(--ease), background 0.25s;
 }
 
@@ -224,8 +286,12 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   width: calc(var(--u) * 26);
   height: calc(var(--u) * 20);
   border-radius: calc(var(--u) * 5);
-  background: linear-gradient(180deg, #2ad3e4, #0bb8ce);
-  box-shadow: 0 0 calc(var(--u) * 3) rgba(20, 200, 220, 0.6);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.1) 48%, rgba(255, 255, 255, 0) 50%),
+    linear-gradient(180deg, #2ad3e4, #0bb8ce);
+  box-shadow:
+    inset 0 calc(var(--u) * -2) calc(var(--u) * 2) rgba(0, 100, 120, 0.3),
+    0 0 calc(var(--u) * 6) rgba(20, 200, 220, 0.55);
 }
 
 /* ---- Grid ---- */
@@ -271,12 +337,13 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   position: relative;
   width: var(--tile);
   height: var(--tile);
-  transition: transform 0.3s var(--pop);
+  transition: transform 0.3s var(--pop), box-shadow 0.3s;
 }
 
-.page.current .slot.glass {
-  -webkit-backdrop-filter: blur(calc(var(--u) * 6));
-  backdrop-filter: blur(calc(var(--u) * 6));
+/* Blurring through every off-screen frame is wasted work */
+.page:not(.current) .slot.glass {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .well {
@@ -284,18 +351,39 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   inset: calc(var(--u) * 11);
   border-radius: calc(var(--u) * 12);
   overflow: hidden;
+  z-index: 1;
 }
 
-.slot.empty .well {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.15));
+/* the icon sits under its own, softer sheen */
+.well::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(150% 120% at 50% -60%, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.08) 89%, rgba(255, 255, 255, 0) 90%);
   box-shadow:
-    inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.7),
-    inset 0 calc(var(--u) * 1) calc(var(--u) * 4) rgba(110, 130, 125, 0.18);
+    inset 0 calc(var(--u) * 1.5) 0 rgba(255, 255, 255, 0.45),
+    inset 0 calc(var(--u) * -2) calc(var(--u) * 4) rgba(0, 0, 0, 0.12);
+  pointer-events: none;
 }
+
+/* empty slots read as a recessed pane of glass */
+.slot.empty .well {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(240, 246, 244, 0.18));
+  box-shadow:
+    inset 0 calc(var(--u) * 3) calc(var(--u) * 5) rgba(85, 118, 108, 0.22),
+    inset 0 calc(var(--u) * -1) 0 rgba(255, 255, 255, 0.9),
+    0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.75),
+    0 calc(var(--u) * -1) 0 calc(var(--u) * 1) rgba(120, 145, 138, 0.18);
+}
+
+.slot.empty .well::after { box-shadow: none; }
 
 .slot.app .well {
   background: var(--c, #9a9a9a);
-  box-shadow: 0 0 0 calc(var(--u) * 1.5) rgba(60, 70, 70, 0.35);
+  box-shadow:
+    0 0 0 calc(var(--u) * 1.5) rgba(50, 62, 60, 0.38),
+    0 calc(var(--u) * 2) calc(var(--u) * 3) rgba(0, 0, 0, 0.18);
 }
 
 .well img {
@@ -319,9 +407,10 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   text-shadow:
     0 0 calc(var(--u) * 1.5) rgba(40, 40, 40, 0.9),
     0 calc(var(--u) * 1) calc(var(--u) * 3) rgba(0, 0, 0, 0.45);
+  z-index: 1;
 }
 
-/* Folder: 3x3 colored squares with the name over them */
+/* Folder: 3x3 glossy squares with the name over them */
 .slot.folder .well {
   background: rgba(255, 255, 255, 0.35);
   box-shadow: none;
@@ -334,24 +423,29 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 .slot.folder .cell {
   border-radius: calc(var(--u) * 5);
   background:
-    radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.08) 48%, rgba(255, 255, 255, 0) 50%),
     var(--c);
-  box-shadow: inset 0 calc(var(--u) * -2) 0 rgba(0, 0, 0, 0.08);
+  box-shadow:
+    inset 0 calc(var(--u) * 1) 0 rgba(255, 255, 255, 0.5),
+    inset 0 calc(var(--u) * -2) calc(var(--u) * 2) rgba(0, 0, 0, 0.15),
+    0 calc(var(--u) * 1) calc(var(--u) * 2) rgba(0, 0, 0, 0.15);
 }
 
-/* Selected: frame turns cyan and pops forward */
+/* Selected: the frame turns to cyan jelly and pops forward */
 .slot.selected {
   transform: scale(1.22);
   z-index: 5;
 }
 
 .slot.glass.selected {
-  background: linear-gradient(180deg, #6fd5ea 0%, #3cc0dc 50%, #2ab3d3 51%, #34bcd9 100%);
+  background: linear-gradient(180deg, #7adbee 0%, #3ec2de 48%, #22acd0 100%);
   box-shadow:
-    0 0 0 calc(var(--u) * 1.5) #1d9fbf,
-    inset 0 calc(var(--u) * 2) calc(var(--u) * 1) rgba(255, 255, 255, 0.6),
-    inset 0 calc(var(--u) * -2) calc(var(--u) * 4) rgba(0, 80, 110, 0.25),
-    0 calc(var(--u) * 6) calc(var(--u) * 14) rgba(0, 90, 120, 0.25);
+    0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.85),
+    0 0 0 calc(var(--u) * 2.2) #1597b8,
+    inset 0 calc(var(--u) * 3) calc(var(--u) * 2) rgba(255, 255, 255, 0.7),
+    inset 0 calc(var(--u) * -6) calc(var(--u) * 9) rgba(0, 70, 100, 0.3),
+    0 0 calc(var(--u) * 22) rgba(30, 190, 230, 0.45),
+    0 calc(var(--u) * 14) calc(var(--u) * 22) rgba(0, 70, 100, 0.25);
 }
 
 .slot.app:not(.selected):active { transform: scale(0.95); }
@@ -366,10 +460,16 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   transform-origin: 50% 100%;
   padding: calc(var(--u) * 20) calc(var(--u) * 22);
   border-radius: calc(var(--u) * 17);
-  background: rgba(255, 255, 255, 0.86);
-  -webkit-backdrop-filter: blur(calc(var(--u) * 3));
-  backdrop-filter: blur(calc(var(--u) * 3));
-  box-shadow: 0 calc(var(--u) * 3) calc(var(--u) * 10) rgba(40, 60, 60, 0.18);
+  background:
+    radial-gradient(150% 120% at 50% -60%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.15) 89%, rgba(255, 255, 255, 0) 90%),
+    rgba(255, 255, 255, 0.8);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow:
+    var(--glass-rim),
+    inset 0 calc(var(--u) * 2) calc(var(--u) * 1) rgba(255, 255, 255, 1),
+    inset 0 calc(var(--u) * -3) calc(var(--u) * 6) rgba(95, 130, 120, 0.15),
+    0 calc(var(--u) * 6) calc(var(--u) * 16) rgba(30, 62, 52, 0.2);
   color: var(--ink);
   font-size: calc(var(--u) * 33);
   font-weight: 500;
@@ -388,7 +488,7 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   width: calc(var(--u) * 22);
   height: calc(var(--u) * 12);
   transform: translateX(-50%);
-  background: inherit;
+  background: rgba(255, 255, 255, 0.8);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
@@ -401,6 +501,7 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 .bubble.below::after {
   top: auto;
   bottom: 100%;
+  background: rgba(255, 255, 255, 0.95);
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 
@@ -422,7 +523,9 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   width: var(--arrow-w);
   height: var(--arrow-h);
   transform: translateY(-50%);
-  filter: drop-shadow(0 calc(var(--u) * 3) calc(var(--u) * 4) rgba(60, 80, 80, 0.22));
+  filter:
+    drop-shadow(0 calc(var(--u) * 8) calc(var(--u) * 10) rgba(30, 62, 52, 0.22))
+    drop-shadow(0 calc(var(--u) * 1) calc(var(--u) * 1) rgba(30, 62, 52, 0.2));
   transition: opacity 0.25s, transform 0.15s var(--ease);
   z-index: 4;
 }
@@ -431,6 +534,7 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   width: 100%;
   height: 100%;
   display: block;
+  overflow: visible;
 }
 
 .arrow.prev { left: var(--arrow-x); }
@@ -471,12 +575,13 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 }
 
 .dock-item > svg,
-.corner-left > svg,
-.corner-right > svg {
+.corner-left > svg {
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 calc(var(--u) * 2) calc(var(--u) * 2) rgba(0, 0, 0, 0.18));
+  filter:
+    drop-shadow(0 calc(var(--u) * 6) calc(var(--u) * 6) rgba(20, 50, 40, 0.22))
+    drop-shadow(0 calc(var(--u) * 1) calc(var(--u) * 1) rgba(0, 0, 0, 0.2));
 }
 
 .dock-item > img {
@@ -485,7 +590,7 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   object-fit: contain;
 }
 
-.dock-item:hover { transform: translateY(calc(var(--u) * -4)); }
+.dock-item:hover { transform: translateY(calc(var(--u) * -5)); }
 .dock-item:active,
 .corner-left:active,
 .corner-right:active { transform: scale(0.9); }
@@ -506,7 +611,11 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   z-index: 3;
 }
 
-.corner-left > svg { filter: drop-shadow(0 0 calc(var(--u) * 4) rgba(20, 200, 220, 0.45)); }
+.corner-left > svg {
+  filter:
+    drop-shadow(0 0 calc(var(--u) * 5) rgba(20, 200, 220, 0.55))
+    drop-shadow(0 calc(var(--u) * 3) calc(var(--u) * 3) rgba(0, 80, 100, 0.25));
+}
 
 .corner-right {
   position: fixed;
@@ -514,16 +623,12 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   bottom: calc(var(--u) * -60);
   width: calc(var(--u) * 180);
   height: calc(var(--u) * 180);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 40% 30%, rgba(255, 255, 255, 0.95), rgba(244, 247, 247, 0.75) 60%, rgba(230, 236, 235, 0.7));
-  box-shadow:
-    0 0 0 calc(var(--u) * 1.5) rgba(170, 182, 180, 0.6),
-    inset 0 calc(var(--u) * 3) calc(var(--u) * 3) rgba(255, 255, 255, 0.9),
-    0 0 calc(var(--u) * 14) rgba(60, 85, 80, 0.15);
   transition: transform 0.2s var(--pop);
   z-index: 3;
 }
+
+.corner-right.glass { border-radius: 50%; }
+.corner-right.glass::after { left: 20%; top: 16%; width: 8%; height: 8%; }
 
 .corner-right > svg {
   position: absolute;
@@ -531,6 +636,8 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   top: calc(var(--u) * 22);
   width: calc(var(--u) * 76);
   height: calc(var(--u) * 76);
+  filter: drop-shadow(0 calc(var(--u) * 3) calc(var(--u) * 3) rgba(0, 0, 0, 0.2));
+  z-index: 1;
 }
 
 /* ---- App window ---- */

@@ -19,8 +19,14 @@
         <stop offset="0.51" stop-color="#e6eaea"/>
         <stop offset="1" stop-color="#f0f2f2"/>
       </linearGradient>
+      <linearGradient id="arrow-shine" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+        <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+      </linearGradient>
       <symbol id="arrow-shape" viewBox="0 0 110 196">
         <path d="M17 8Q9 3 10 14Q30 98 10 182Q9 193 17 188L101 106Q107 98 101 90Z" fill="url(#arrow-fill)" stroke="#c3cbcb" stroke-width="1.5"/>
+        <path d="M20 15Q15 12 16 20Q27 62 25 96L93 96Z" fill="url(#arrow-shine)"/>
+        <path d="M17 10Q11 7 12 15" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
       </symbol>
     </defs>
   </svg>
@@ -28,7 +34,7 @@
   <div class="bg" id="bg" aria-hidden="true"></div>
 
   <main class="menu" aria-label="Wii U Menu">
-    <button class="user" id="user" type="button" aria-label="User">
+    <button class="user glass" id="user" type="button" aria-label="User">
       <span class="user-avatar" id="userAvatar"></span>
       <span class="badge" aria-hidden="true">
         <svg viewBox="0 0 24 24"><path d="M5 9.5a10 10 0 0 1 14 0M8 12.5a6 6 0 0 1 8 0" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M7 21v-4.5a5 5 0 0 1 10 0V21h-3.2v-4.5a1.8 1.8 0 0 0-3.6 0V21z" fill="#fff"/></svg>
@@ -50,7 +56,7 @@
 
     <footer class="dock" id="dock"></footer>
     <button class="corner-left" id="cornerLeft" type="button"></button>
-    <button class="corner-right" id="cornerRight" type="button"></button>
+    <button class="corner-right glass" id="cornerRight" type="button"></button>
   </main>
 
   <div class="launch" id="launch" role="dialog" aria-modal="true" aria-labelledby="launchTitle" hidden>
