@@ -1,0 +1,9 @@
+{
+  "name": "wii-u-menu",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfolio site styled after the Wii U Menu",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
