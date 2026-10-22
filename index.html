@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ececec">
+  <meta name="theme-color" content="#e8eeec">
   <title>Wii U Menu</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,34 +11,46 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <main class="menu" id="menu" aria-label="Wii U Menu">
-    <header class="topbar">
-      <button class="user" id="user" type="button" aria-label="User">
-        <span class="user-avatar" id="userAvatar"></span>
-      </button>
-      <div class="title" id="title" aria-live="polite"></div>
-      <button class="swap" id="swap" type="button" aria-label="Switch screens">
-        <svg viewBox="0 0 48 48" aria-hidden="true">
-          <rect x="4" y="9" width="24" height="16" rx="2.5"/>
-          <rect x="20" y="25" width="24" height="14" rx="4"/>
-          <path d="M34 8h4a3 3 0 0 1 3 3v6m0 0-3-3m3 3 3-3M14 40h-4a3 3 0 0 1-3-3v-6m0 0-3 3m3-3 3 3" class="arrows"/>
-        </svg>
-      </button>
-    </header>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="arrow-fill" x1="0" y1="0" x2="0.35" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="0.5" stop-color="#f7f8f8"/>
+        <stop offset="0.51" stop-color="#e6eaea"/>
+        <stop offset="1" stop-color="#f0f2f2"/>
+      </linearGradient>
+      <symbol id="arrow-shape" viewBox="0 0 110 196">
+        <path d="M17 8Q9 3 10 14Q30 98 10 182Q9 193 17 188L101 106Q107 98 101 90Z" fill="url(#arrow-fill)" stroke="#c3cbcb" stroke-width="1.5"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="bg" id="bg" aria-hidden="true"></div>
+
+  <main class="menu" aria-label="Wii U Menu">
+    <button class="user" id="user" type="button" aria-label="User">
+      <span class="user-avatar" id="userAvatar"></span>
+      <span class="badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M5 9.5a10 10 0 0 1 14 0M8 12.5a6 6 0 0 1 8 0" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M7 21v-4.5a5 5 0 0 1 10 0V21h-3.2v-4.5a1.8 1.8 0 0 0-3.6 0V21z" fill="#fff"/></svg>
+      </span>
+    </button>
 
     <nav class="dots" id="dots" aria-label="Pages"></nav>
 
     <section class="viewport" id="viewport">
       <div class="track" id="track"></div>
-      <button class="arrow prev" id="prev" type="button" aria-label="Previous page">
-        <svg viewBox="0 0 24 48" aria-hidden="true"><path d="M18 6 6 24l12 18"/></svg>
-      </button>
-      <button class="arrow next" id="next" type="button" aria-label="Next page">
-        <svg viewBox="0 0 24 48" aria-hidden="true"><path d="M6 6l12 18L6 42"/></svg>
-      </button>
     </section>
 
+    <button class="arrow prev" id="prev" type="button" aria-label="Previous page">
+      <svg aria-hidden="true"><use href="#arrow-shape"/></svg>
+    </button>
+    <button class="arrow next" id="next" type="button" aria-label="Next page">
+      <svg aria-hidden="true"><use href="#arrow-shape"/></svg>
+    </button>
+
     <footer class="dock" id="dock"></footer>
+    <button class="corner-left" id="cornerLeft" type="button"></button>
+    <button class="corner-right" id="cornerRight" type="button"></button>
   </main>
 
   <div class="launch" id="launch" role="dialog" aria-modal="true" aria-labelledby="launchTitle" hidden>

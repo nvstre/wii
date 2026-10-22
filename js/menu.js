@@ -8,7 +8,6 @@
   const track = $("track");
   const viewport = $("viewport");
   const dots = $("dots");
-  const title = $("title");
   const prevBtn = $("prev");
   const nextBtn = $("next");
   const launchEl = $("launch");
@@ -81,48 +80,156 @@
     window.addEventListener("keydown", start);
   }
 
-  // ---- Icons ----
+  // ---- Artwork ----
+
+  const grad = (id, top, bottom) =>
+    `<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bottom}"/></linearGradient>`;
+
+  const PEOPLE =
+    '<circle cx="40" cy="19" r="9"/><rect x="31" y="30" width="18" height="22" rx="6"/><path d="M31 35l-7 11M49 35l7 11"/>' +
+    '<rect x="33" y="50" width="5" height="16" rx="2.5"/><rect x="42" y="50" width="5" height="16" rx="2.5"/>' +
+    '<circle cx="20" cy="31" r="7"/><rect x="13" y="39" width="14" height="16" rx="5"/>' +
+    '<rect x="14.5" y="53" width="4" height="12" rx="2"/><rect x="21.5" y="53" width="4" height="12" rx="2"/>' +
+    '<circle cx="60" cy="31" r="7"/><rect x="53" y="39" width="14" height="16" rx="5"/>' +
+    '<rect x="54.5" y="53" width="4" height="12" rx="2"/><rect x="61.5" y="53" width="4" height="12" rx="2"/>';
+
+  const BUBBLE_PATH = "M15 8h50a9 9 0 0 1 9 9v36a9 9 0 0 1-9 9H48l-8 10-8-10H15a9 9 0 0 1-9-9V17a9 9 0 0 1 9-9z";
 
   const GLYPHS = {
-    bubble: '<path d="M12 10h24a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6H22l-8 7v-7h-2a6 6 0 0 1-6-6V16a6 6 0 0 1 6-6z"/>',
-    bag: '<path d="M10 17h28l-2.5 24h-23zM17 17v-3a7 7 0 0 1 14 0v3h-3.5v-3a3.5 3.5 0 0 0-7 0v3z"/>',
-    globe: '<path fill-rule="evenodd" d="M24 6a18 18 0 1 1 0 36 18 18 0 0 1 0-36zm-3.2 4a15 15 0 0 0-9.6 11.5h6.5c.4-4.4 1.5-8.4 3.1-11.5zm6.4 0c1.6 3.1 2.7 7.1 3.1 11.5h6.5A15 15 0 0 0 27.2 10zM24 9.6c-1.9 2.6-3.2 6.9-3.6 11.9h7.2c-.4-5-1.7-9.3-3.6-11.9zM11.2 26.5a15 15 0 0 0 9.6 11.5c-1.6-3.1-2.7-7.1-3.1-11.5zm9.2 0c.4 5 1.7 9.3 3.6 11.9 1.9-2.6 3.2-6.9 3.6-11.9zm9.9 0c-.4 4.4-1.5 8.4-3.1 11.5a15 15 0 0 0 9.6-11.5z"/>',
-    tv: '<path fill-rule="evenodd" d="M10 12h28a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4V16a4 4 0 0 1 4-4zm1 4v16h26V16zM16 39h16v3H16z"/>',
-    bell: '<path d="M24 6a3 3 0 0 1 3 3v1.3A12 12 0 0 1 36 22v8l4 5H8l4-5v-8a12 12 0 0 1 9-11.7V9a3 3 0 0 1 3-3zm-5 32h10a5 5 0 0 1-10 0z"/>',
+    friends:
+      `<defs>${grad("i-fr", "#ffa63c", "#f27812")}${grad("i-fr2", "#ffffff", "#ebeae6")}</defs>` +
+      '<rect x="6" y="12" width="68" height="62" rx="11" fill="#c2560b"/>' +
+      '<rect x="6" y="6" width="68" height="62" rx="11" fill="url(#i-fr)"/>' +
+      '<rect x="14" y="14" width="52" height="46" rx="5" fill="url(#i-fr2)"/>' +
+      '<rect x="28" y="23" width="6" height="12" rx="3" fill="#f5891f"/>' +
+      '<rect x="46" y="23" width="6" height="12" rx="3" fill="#f5891f"/>' +
+      '<path d="M27 43q13 11 26 0" fill="none" stroke="#f5891f" stroke-width="5" stroke-linecap="round"/>',
+    community:
+      `<defs>${grad("i-cm", "#5fd63c", "#2da51b")}</defs>` +
+      `<g transform="translate(0 4)" fill="#1d8510" stroke="#1d8510" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">${PEOPLE}</g>` +
+      `<g fill="url(#i-cm)" stroke="url(#i-cm)" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">${PEOPLE}</g>` +
+      `<g fill="#fff" stroke="#fff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">${PEOPLE}</g>` +
+      '<circle cx="36.5" cy="18" r="1.4" fill="#2aa31a"/><circle cx="43.5" cy="18" r="1.4" fill="#2aa31a"/>' +
+      '<path d="M36 22q4 3 8 0" stroke="#2aa31a" stroke-width="1.5" fill="none" stroke-linecap="round"/>',
+    shop:
+      `<defs>${grad("i-sh", "#ffcc3d", "#f6a70c")}</defs>` +
+      '<path d="M29 24v-7a11 11 0 0 1 22 0v7" fill="none" stroke="#e39a06" stroke-width="5"/>' +
+      '<path d="M15 27h50l5 46H10z" fill="#c88400" stroke="#c88400" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M15 24h50l5 46H10z" fill="url(#i-sh)" stroke="url(#i-sh)" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M15 24h50l2.2 20Q42 54 12.6 46z" fill="#fff" opacity=".2"/>',
+    browser:
+      `<defs>${grad("i-br", "#3786ff", "#0c45cc")}${grad("i-br2", "#ffffff", "#d5d9e0")}` +
+      '<clipPath id="i-brc"><circle cx="40" cy="38" r="27"/></clipPath></defs>' +
+      '<circle cx="40" cy="42" r="35" fill="#0a36a2"/>' +
+      '<circle cx="40" cy="38" r="35" fill="url(#i-br)"/>' +
+      '<circle cx="40" cy="38" r="27" fill="url(#i-br2)"/>' +
+      '<g clip-path="url(#i-brc)" fill="none" stroke="#1a5fe6" stroke-width="5"><path d="M10 38h60M10 25h60M10 51h60"/><ellipse cx="40" cy="38" rx="12" ry="28"/></g>' +
+      '<path d="M17 25a26 26 0 0 1 19-14" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55"/>',
+    tv:
+      `<defs>${grad("i-tv", "#ff4d55", "#e3202b")}${grad("i-tv2", "#ffffff", "#e9e9e9")}</defs>` +
+      '<path d="M31 53h18v8h11a5 5 0 0 1 5 5v5H15v-5a5 5 0 0 1 5-5h11z" fill="#a8121b"/>' +
+      '<path d="M31 50h18v8h11a5 5 0 0 1 5 5v5H15v-5a5 5 0 0 1 5-5h11z" fill="url(#i-tv)"/>' +
+      '<rect x="6" y="11" width="68" height="44" rx="8" fill="#a8121b"/>' +
+      '<rect x="6" y="7" width="68" height="44" rx="8" fill="url(#i-tv)"/>' +
+      '<rect x="14" y="14" width="52" height="30" rx="2" fill="url(#i-tv2)"/>',
+    notifications:
+      `<defs>${grad("i-nt", "#46d6e6", "#12a7bf")}</defs>` +
+      `<path d="${BUBBLE_PATH}" transform="translate(0 3)" fill="#0b7d90"/>` +
+      `<path d="${BUBBLE_PATH}" fill="url(#i-nt)"/>` +
+      '<rect x="14" y="15" width="52" height="40" rx="5" fill="#fff"/>' +
+      '<path d="M23 25h34M23 35h34M23 45h34" stroke="#1fb3ca" stroke-width="5" stroke-linecap="round"/>',
+    downloads:
+      `<defs>${grad("i-dl", "#3fb2ff", "#0d6fe0")}</defs>` +
+      '<g stroke-width="6" stroke-linejoin="round">' +
+      '<path d="M66 38v26l-26 10V48z" fill="#0c5fc8" stroke="#0c5fc8"/>' +
+      '<path d="M14 38v26l26 10V48z" fill="url(#i-dl)" stroke="url(#i-dl)"/>' +
+      '<path d="M14 38l26-10 26 10-26 10z" fill="#6cc8ff" stroke="#6cc8ff"/></g>' +
+      '<path d="M19 47l16 6v15l-16-6z" fill="#fff" opacity=".95"/>' +
+      '<path d="M33 4h14v14h9L40 34 24 18h9z" fill="#e8e8e8" stroke="#22c3ee" stroke-width="3" stroke-linejoin="round"/>',
+    usb:
+      `<defs>${grad("i-us", "#4fdcec", "#13b5cc")}</defs>` +
+      '<path d="M15 10h30l9 20v16a6 6 0 0 1-6 6H12a6 6 0 0 1-6-6V30z" fill="url(#i-us)"/>' +
+      '<path d="M17 14h26l6.5 14h-39z" fill="#eafcff"/>' +
+      '<path d="M19 41h22M37 38l4 3-4 3M25 41l3-4h4M29 41l3 3h3" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="18" cy="41" r="2" fill="#fff"/>',
+    swap:
+      '<rect x="10" y="5" width="60" height="40" rx="4" fill="#7a7a7a"/>' +
+      '<rect x="16" y="11" width="48" height="28" rx="1" fill="#f4f4f4"/>' +
+      '<path d="M18 52h44a9 9 0 0 1 9 9v6a7 7 0 0 1-7 7H16a7 7 0 0 1-7-7v-6a9 9 0 0 1 9-9z" fill="#7a7a7a"/>' +
+      '<rect x="27" y="56" width="26" height="14" rx="1" fill="#f4f4f4"/>' +
+      '<circle cx="18" cy="60" r="2.2" fill="#f4f4f4"/><circle cx="62" cy="67" r="1.6" fill="#f4f4f4"/>' +
+      '<path d="M60 58.5v5M57.5 61h5" stroke="#f4f4f4" stroke-width="1.8"/>' +
+      '<path d="M40 14l12 12h-7v30h7L40 68 28 56h7V26h-7z" fill="#17b5c6"/>',
   };
 
+  const GLYPH_VIEWBOX = { usb: "0 0 60 60" };
+
   const DEFAULT_AVATAR =
-    '<svg viewBox="0 0 64 64" aria-hidden="true">' +
-    '<rect width="64" height="64" fill="#bfe6f7"/>' +
-    '<ellipse cx="32" cy="36" rx="17" ry="19" fill="#f6d5b8"/>' +
-    '<path d="M14 32c0-14 8-21 18-21s18 7 18 21c-3-6-8-9-18-9s-15 3-18 9z" fill="#5a3b2a"/>' +
-    '<ellipse cx="25" cy="36" rx="2.2" ry="3.2" fill="#333"/>' +
-    '<ellipse cx="39" cy="36" rx="2.2" ry="3.2" fill="#333"/>' +
-    '<path d="M26 45q6 5 12 0" fill="none" stroke="#c0504a" stroke-width="2.4" stroke-linecap="round"/>' +
+    '<svg viewBox="0 0 96 96" aria-hidden="true">' +
+    '<path d="M22 96c2-16 12-24 26-24s24 8 26 24z" fill="#3a7bd5"/>' +
+    '<rect x="42" y="62" width="12" height="12" fill="#f2c9a0"/>' +
+    '<ellipse cx="48" cy="46" rx="20" ry="23" fill="#f6d3b0"/>' +
+    '<path d="M27 44c-1-17 9-27 21-27s23 9 21 27c-4-8-10-12-21-12s-17 4-21 12z" fill="#5b3a26"/>' +
+    '<ellipse cx="40.5" cy="48" rx="2.3" ry="3.4" fill="#2b2b2b"/>' +
+    '<ellipse cx="55.5" cy="48" rx="2.3" ry="3.4" fill="#2b2b2b"/>' +
+    '<path d="M42 58q6 4 12 0" fill="none" stroke="#b5584f" stroke-width="2.2" stroke-linecap="round"/>' +
     "</svg>";
+
+  const GHOST_ART = {
+    pad: '<svg viewBox="0 0 320 180"><rect x="4" y="4" width="312" height="172" rx="60"/><rect x="88" y="30" width="144" height="100" rx="8"/><circle cx="44" cy="62" r="18"/><circle cx="276" cy="62" r="18"/><path d="M32 116h24M44 104v24" fill="none"/><circle cx="276" cy="116" r="8"/></svg>',
+    remote: '<svg viewBox="0 0 80 300"><rect x="4" y="4" width="72" height="292" rx="30"/><circle cx="40" cy="72" r="14"/><path d="M28 34h24M40 22v24" fill="none"/><circle cx="40" cy="200" r="7"/><circle cx="40" cy="226" r="7"/></svg>',
+    disc: '<svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="96"/><circle cx="100" cy="100" r="20"/></svg>',
+    button: '<svg viewBox="0 0 160 70"><rect x="4" y="4" width="152" height="62" rx="31"/></svg>',
+    stylus: '<svg viewBox="0 0 30 260"><rect x="4" y="4" width="22" height="252" rx="11"/></svg>',
+  };
+
+  const GHOSTS = [
+    { art: "pad", x: 66, y: 2, w: 360, r: 14, dx: -30, dy: 20, t: 46 },
+    { art: "remote", x: 1, y: 28, w: 70, r: -38, dx: 25, dy: -25, t: 38 },
+    { art: "disc", x: 18, y: -14, w: 230, r: 0, dx: 30, dy: 15, t: 52 },
+    { art: "button", x: 83, y: 36, w: 170, r: 28, dx: -20, dy: 25, t: 34 },
+    { art: "stylus", x: 47, y: 68, w: 26, r: 62, dx: 40, dy: -10, t: 42 },
+    { art: "pad", x: 6, y: 74, w: 220, r: -16, dx: 30, dy: -20, t: 48 },
+    { art: "remote", x: 88, y: 70, w: 60, r: 20, dx: -20, dy: -30, t: 40 },
+  ];
+
+  const glyphSvg = (name) =>
+    `<svg viewBox="${GLYPH_VIEWBOX[name] || "0 0 80 80"}" aria-hidden="true">${GLYPHS[name]}</svg>`;
 
   const iconMarkup = (item) => {
     if (item.icon) return `<img src="${item.icon}" alt="" draggable="false">`;
-    if (item.glyph && GLYPHS[item.glyph]) return `<svg viewBox="0 0 48 48" aria-hidden="true">${GLYPHS[item.glyph]}</svg>`;
-    return `<span class="label">${item.label || ""}</span>`;
+    if (item.glyph && GLYPHS[item.glyph]) return glyphSvg(item.glyph);
+    return "";
+  };
+
+  const wellMarkup = (app) => {
+    const label = app.label ? `<span class="label">${app.label}</span>` : "";
+    if (app.icon) return `<span class="well"><img src="${app.icon}" alt="" draggable="false"></span>`;
+    if (app.folder) return `<span class="well">${'<span class="cell"></span>'.repeat(9)}${label}</span>`;
+    return `<span class="well">${label}</span>`;
   };
 
   // ---- Build ----
 
-  const avatar = $("userAvatar");
-  if (config.user && config.user.avatar) {
-    avatar.innerHTML = `<img src="${config.user.avatar}" alt="" draggable="false">`;
-  } else {
-    avatar.innerHTML = DEFAULT_AVATAR;
-  }
-  if (config.user && config.user.name) $("user").setAttribute("aria-label", config.user.name);
+  const bg = $("bg");
+  GHOSTS.forEach((g) => {
+    const el = document.createElement("div");
+    el.className = "ghost";
+    el.innerHTML = GHOST_ART[g.art];
+    el.style.cssText =
+      `left:${g.x}%;top:${g.y}%;--w:calc(var(--u) * ${g.w});--r:${g.r}deg;--dx:${g.dx};--dy:${g.dy};--t:${g.t}s`;
+    bg.appendChild(el);
+  });
 
+  const user = config.user || {};
+  $("userAvatar").innerHTML = user.avatar ? `<img src="${user.avatar}" alt="" draggable="false">` : DEFAULT_AVATAR;
+  if (user.name) $("user").setAttribute("aria-label", user.name);
+
+  const pages = [];
   for (let p = 0; p < pageCount; p++) {
     const pageEl = document.createElement("div");
     pageEl.className = "page";
-    pageEl.style.left = `${p * 100}%`;
-    const grid = document.createElement("div");
-    grid.className = "grid";
+    pageEl.style.left = `calc(var(--page-pitch) * ${p} - var(--grid-w) / 2)`;
     for (let i = 0; i < PER_PAGE; i++) {
       const index = p * PER_PAGE + i;
       const app = apps[index];
@@ -130,18 +237,20 @@
       if (app) {
         slot = document.createElement("button");
         slot.type = "button";
-        slot.className = "slot app";
+        slot.className = `slot glass app${app.folder ? " folder" : ""}`;
         slot.setAttribute("aria-label", app.title || "");
-        slot.innerHTML = `<span class="icon" style="--c:${app.color || "#9a9a9a"}">${iconMarkup(app)}</span>`;
+        slot.style.setProperty("--c", app.color || "#9a9a9a");
+        slot.innerHTML = wellMarkup(app);
       } else {
         slot = document.createElement("div");
-        slot.className = "slot empty";
+        slot.className = "slot glass empty";
+        slot.innerHTML = '<span class="well"></span>';
       }
       slot.dataset.index = index;
-      grid.appendChild(slot);
+      pageEl.appendChild(slot);
     }
-    pageEl.appendChild(grid);
     track.appendChild(pageEl);
+    pages.push(pageEl);
 
     const dot = document.createElement("span");
     dot.className = "dot";
@@ -150,58 +259,88 @@
 
   const slots = Array.from(track.querySelectorAll(".slot"));
 
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  const hoverBubble = document.createElement("div");
+  hoverBubble.className = "bubble small";
+
+  function hoverLabel(el, text) {
+    el.addEventListener("mouseenter", () => {
+      if (!text) return;
+      hoverBubble.textContent = text;
+      el.appendChild(hoverBubble);
+    });
+    el.addEventListener("mouseleave", () => hoverBubble.remove());
+  }
+
   const dock = $("dock");
   dockItems.forEach((item) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "dock-item";
-    btn.style.setProperty("--c", item.color || "#9a9a9a");
     btn.setAttribute("aria-label", item.title || "");
     btn.innerHTML = iconMarkup(item);
-    btn.addEventListener("mouseenter", () => showTitle(item.title));
-    btn.addEventListener("mouseleave", () => showTitle(selectedApp() && selectedApp().title));
+    hoverLabel(btn, item.title);
     btn.addEventListener("click", () => activate(item, btn));
     dock.appendChild(btn);
+  });
+
+  [["cornerLeft", config.cornerLeft], ["cornerRight", config.cornerRight]].forEach(([id, item]) => {
+    const btn = $(id);
+    if (!item) return btn.remove();
+    btn.setAttribute("aria-label", item.title || "");
+    btn.innerHTML = iconMarkup(item);
+    btn.addEventListener("click", () => activate(item, btn));
   });
 
   // ---- State ----
 
   const selectedApp = () => (selected >= 0 ? apps[selected] : null);
 
-  function showTitle(text) {
-    if (text) title.textContent = text;
-    title.classList.toggle("show", Boolean(text));
-  }
-
   function select(index, { sound = true } = {}) {
     if (selected >= 0) slots[selected].classList.remove("selected");
+    bubble.remove();
     selected = index;
-    if (selected >= 0) {
-      slots[selected].classList.add("selected");
-      if (sound) apps[selected] ? sfx.select() : sfx.move();
+    if (selected < 0) return;
+    const slot = slots[selected];
+    slot.classList.add("selected");
+    const app = apps[selected];
+    if (app && app.title) {
+      bubble.textContent = app.title;
+      bubble.classList.toggle("below", Math.floor((selected % PER_PAGE) / cols()) === 0);
+      slot.appendChild(bubble);
     }
-    showTitle(selectedApp() && selectedApp().title);
+    if (sound) app ? sfx.select() : sfx.move();
   }
 
-  function goTo(p, { sound = true } = {}) {
+  function goTo(p, { sound = true, keepSelection = false } = {}) {
     const next = Math.max(0, Math.min(pageCount - 1, p));
-    if (next !== page && sound) sfx.page();
+    if (next !== page) {
+      if (sound) sfx.page();
+      if (!keepSelection) select(-1, { sound: false });
+    }
     page = next;
-    track.style.transform = `translateX(${-page * 100}%)`;
-    dots.querySelectorAll(".dot").forEach((d, i) => d.classList.toggle("active", i === page));
-    prevBtn.hidden = page === 0;
-    nextBtn.hidden = page === pageCount - 1;
+    track.style.transform = `translateX(calc(var(--page-pitch) * ${-page}))`;
+    pages.forEach((el, i) => el.classList.toggle("current", i === page));
+    Array.from(dots.children).forEach((d, i) => d.classList.toggle("active", i === page));
+    prevBtn.classList.toggle("off", page === 0);
+    nextBtn.classList.toggle("off", page === pageCount - 1);
+  }
+
+  function bump(el) {
+    el.classList.remove("bump");
+    void el.offsetWidth;
+    el.classList.add("bump");
   }
 
   function activate(item, el) {
     if (!item.url && !item.content) {
       sfx.none();
-      el.classList.remove("bump");
-      void el.offsetWidth;
-      el.classList.add("bump");
+      bump(el);
       return;
     }
     sfx.open();
+    hoverBubble.remove();
     openFrom = el;
     const r = el.getBoundingClientRect();
     const s = launchEl.style;
@@ -247,6 +386,8 @@
     const slot = e.target.closest(".slot");
     if (!slot) return select(-1, { sound: false });
     const index = Number(slot.dataset.index);
+    const slotPage = Math.floor(index / PER_PAGE);
+    if (slotPage !== page) return goTo(slotPage);
     if (!apps[index]) return select(-1, { sound: false });
     if (index === selected) activate(apps[index], slot);
     else select(index);
@@ -255,15 +396,14 @@
   prevBtn.addEventListener("click", () => goTo(page - 1));
   nextBtn.addEventListener("click", () => goTo(page + 1));
   dots.addEventListener("click", (e) => {
-    const i = Array.from(dots.children).indexOf(e.target);
+    const i = Array.from(dots.children).indexOf(e.target.closest(".dot"));
     if (i >= 0) goTo(i);
   });
 
-  $("swap").addEventListener("click", () => sfx.select());
   $("user").addEventListener("click", (e) => {
-    const user = config.user || {};
     activate({ title: user.name, content: user.content }, e.currentTarget);
   });
+  hoverLabel($("user"), user.name);
   $("launchClose").addEventListener("click", closeApp);
 
   // Swipe between pages
@@ -271,7 +411,7 @@
   let dragX = 0;
 
   viewport.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0 || e.target.closest(".arrow")) return;
+    if (e.button !== 0) return;
     dragStart = { x: e.clientX, y: e.clientY, id: e.pointerId };
     dragX = 0;
     suppressClick = false;
@@ -289,7 +429,7 @@
     }
     const atEdge = (dx > 0 && page === 0) || (dx < 0 && page === pageCount - 1);
     dragX = atEdge ? dx * 0.3 : dx;
-    track.style.transform = `translateX(calc(${-page * 100}% + ${dragX}px))`;
+    track.style.transform = `translateX(calc(var(--page-pitch) * ${-page} + ${dragX}px))`;
   });
 
   const endDrag = () => {
@@ -297,7 +437,7 @@
     dragStart = null;
     track.classList.remove("dragging");
     if (!suppressClick) return;
-    const threshold = viewport.clientWidth * 0.12;
+    const threshold = viewport.clientWidth * 0.08;
     if (dragX < -threshold) goTo(page + 1);
     else if (dragX > threshold) goTo(page - 1);
     else goTo(page, { sound: false });
@@ -319,9 +459,6 @@
     if (!launchEl.hidden) {
       if (e.key === "Escape" || e.key === "Backspace") closeApp();
       return;
-    }
-    if (e.target.closest && e.target.closest(".dock, .topbar")) {
-      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
     }
     const c = cols();
     const rows = PER_PAGE / c;
@@ -352,7 +489,7 @@
         break;
       case "Enter":
       case " ":
-        if (selectedApp()) {
+        if (selectedApp() && document.activeElement === document.body) {
           e.preventDefault();
           activate(selectedApp(), slots[selected]);
         }
@@ -363,11 +500,17 @@
         return;
     }
     e.preventDefault();
+    // Keep Enter going to the keyboard selection rather than a previously clicked tile.
+    if (document.activeElement && document.activeElement.classList.contains("slot")) document.activeElement.blur();
     if (target !== selected) {
-      select(target);
       const tp = Math.floor(target / PER_PAGE);
-      if (tp !== page) goTo(tp);
+      if (tp !== page) goTo(tp, { keepSelection: true });
+      select(target);
     }
+  });
+
+  portrait.addEventListener("change", () => {
+    if (selected >= 0) select(selected, { sound: false });
   });
 
   goTo(0, { sound: false });
