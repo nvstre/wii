@@ -505,9 +505,28 @@
 
   let current = null;
   let stack = [];
-  let closeTimer = 0;
+  let zoomAnim = null;
 
-  const RISE = ".launch-body > *, .project > *, .about > *, .list > li, .posts > *, .shop-grid > *, .videos > *, .gallery > *";
+  // The window zooms out of the tile it was opened from (or the screen centre) and back into it.
+  function zoom(reverse) {
+    if (zoomAnim) zoomAnim.cancel();
+    zoomAnim = null;
+    if (reduceMotion || !launchEl.animate) return null;
+    let r = openFrom && document.contains(openFrom) ? openFrom.getBoundingClientRect() : null;
+    if (!r || !r.width) r = { left: innerWidth / 2 - 60, top: innerHeight / 2 - 60, width: 120, height: 120 };
+    const small = { transform: `translate(${r.left}px, ${r.top}px) scale(${r.width / innerWidth}, ${r.height / innerHeight})`, opacity: 0.4 };
+    const full = { transform: "translate(0px, 0px) scale(1, 1)", opacity: 1 };
+    zoomAnim = launchEl.animate(
+      reverse ? [full, small] : [small, full],
+      reverse
+        ? { duration: 360, delay: 90, easing: "cubic-bezier(0.55, 0, 0.75, 0.25)", fill: "forwards" }
+        : { duration: 560, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+    );
+    return zoomAnim;
+  }
+
+  // Containers whose children rise one by one instead of the container as a whole
+  const RISE_GROUPS = ".project, .about, .list, .posts, .shop-grid, .videos";
 
   function render(id) {
     const route = routes[id];
@@ -517,9 +536,14 @@
     launchBody.innerHTML = route.render();
     launchBody.scrollTop = 0;
     // cards rise in one after another
-    launchEl.querySelectorAll(RISE).forEach((el, i) => {
+    const parts = [];
+    Array.from(launchBody.children).forEach((el) => {
+      if (el.matches(RISE_GROUPS)) parts.push(...el.children);
+      else parts.push(el);
+    });
+    parts.forEach((el, i) => {
       el.classList.add("rise");
-      el.style.setProperty("--n", Math.min(i, 10));
+      el.style.setProperty("--n", Math.min(i, 8));
     });
     Pages.mount(launchBody);
     document.title = `${route.title} · ${user.name || "Portfolio"}`;
@@ -553,7 +577,6 @@
   function openRoute(id, fromEl, { push = true } = {}) {
     if (!routes[id]) return;
     if (id === current) return;
-    clearTimeout(closeTimer);
     hoverBubble.remove();
     if (!launchEl.hidden && launchEl.classList.contains("open")) {
       swapTo(id, "fwd");
@@ -565,19 +588,17 @@
       render(id);
       stack = [id];
       openFrom = fromEl || null;
-      const r = fromEl
-        ? fromEl.getBoundingClientRect()
-        : { top: innerHeight / 2 - 60, left: innerWidth / 2 - 60, right: innerWidth / 2 + 60, bottom: innerHeight / 2 + 60 };
-      const s = launchEl.style;
-      s.setProperty("--t", `${r.top}px`);
-      s.setProperty("--l", `${r.left}px`);
-      s.setProperty("--r", `${innerWidth - r.right}px`);
-      s.setProperty("--b", `${innerHeight - r.bottom}px`);
-      launchSplash.innerHTML = routes[id].icon || "";
       launchEl.hidden = false;
       launchEl.classList.remove("open");
       void launchEl.offsetWidth;
       launchEl.classList.add("open");
+      zoom(false);
+      if (!reduceMotion) {
+        launchSplash.innerHTML = routes[id].icon || "";
+        launchSplash.classList.remove("show");
+        void launchSplash.offsetWidth;
+        launchSplash.classList.add("show");
+      }
       document.body.classList.add("app-open");
       sfx.open();
       if (fromEl) $("launchClose").focus({ preventScroll: true });
@@ -595,11 +616,17 @@
     stack = [];
     document.title = `${user.name || "Your Name"} · Portfolio`;
     if (push && location.hash) history.pushState(null, "", location.pathname + location.search);
-    closeTimer = setTimeout(() => {
+    const finish = () => {
       launchEl.hidden = true;
       launchBody.innerHTML = "";
+      if (zoomAnim) zoomAnim.cancel();
+      zoomAnim = null;
       if (openFrom && document.contains(openFrom)) openFrom.focus({ preventScroll: true });
-    }, 450);
+    };
+    const shrink = zoom(true);
+    // reopening mid-close cancels the shrink, and then nothing here runs
+    if (shrink) shrink.finished.then(finish, () => {});
+    else finish();
   }
 
   function back() {
@@ -651,6 +678,7 @@
     folderView.hidden = false;
     void folderView.offsetWidth;
     folderView.classList.add("open");
+    document.body.classList.add("folder-open");
     morph(folderPanel, el, false);
     sfx.open();
     $("folderClose").focus({ preventScroll: true });
@@ -680,6 +708,7 @@
     sfx.back();
     const shrink = morph(folderPanel, folderFrom && document.contains(folderFrom) ? folderFrom : null, true);
     folderView.classList.remove("open");
+    document.body.classList.remove("folder-open");
     folderItems = [];
     setTimeout(() => {
       if (shrink) shrink.cancel();

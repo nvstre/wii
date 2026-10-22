@@ -26,8 +26,7 @@
   --ink: #3a3a3a;
 
   /* Glass recipe shared by frames, the user icon, the bubble and the corner ring */
-  --glass-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 251, 250, 0.52) 48%, rgba(228, 238, 235, 0.46) 100%);
-  --glass-blur: blur(calc(var(--u) * 8)) saturate(1.6) brightness(1.05);
+  --glass-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 252, 252, 0.7) 48%, rgba(232, 240, 238, 0.64) 100%);
   --glass-gloss: radial-gradient(150% 120% at 50% -60%, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.28) 89%, rgba(255, 255, 255, 0) 90%);
   --glass-rim:
     0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.95),
@@ -43,6 +42,7 @@
 
   --pop: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @supports (height: 100dvh) {
@@ -136,8 +136,6 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 .glass {
   border-radius: var(--radius);
   background: var(--glass-fill);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
   box-shadow: var(--glass-rim), var(--glass-bevel), var(--glass-drop);
 }
 
@@ -289,7 +287,7 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   left: 50%;
   top: 0;
   height: 100%;
-  transition: transform 0.5s var(--ease);
+  transition: transform 0.6s var(--smooth);
   will-change: transform;
 }
 
@@ -319,12 +317,6 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 }
 
 .page.current .slot.app:hover:not(.selected) { translate: 0 calc(var(--u) * -3); }
-
-/* Blurring through every off-screen frame is wasted work */
-.page:not(.current) .slot.glass {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
 
 .well {
   position: absolute;
@@ -430,19 +422,22 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 
 .slot.app:not(.selected):active { transform: scale(0.95); }
 
-/* the selected frame breathes */
-.slot.glass.selected { animation: sel-glow 1.8s ease-in-out infinite alternate; }
+/* the selected frame breathes: a glow layer fades in and out (cheap to animate) */
+.slot.glass.selected::after {
+  inset: calc(var(--u) * -4);
+  width: auto;
+  height: auto;
+  border-radius: calc(var(--radius) + var(--u) * 4);
+  background: none;
+  box-shadow: 0 0 calc(var(--u) * 26) rgba(30, 190, 230, 0.8);
+  z-index: 0;
+  animation: glow 1.8s ease-in-out infinite alternate;
+  will-change: opacity;
+}
 
-@keyframes sel-glow {
-  to {
-    box-shadow:
-      0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.85),
-      0 0 0 calc(var(--u) * 2.2) #1597b8,
-      inset 0 calc(var(--u) * 3) calc(var(--u) * 2) rgba(255, 255, 255, 0.7),
-      inset 0 calc(var(--u) * -6) calc(var(--u) * 9) rgba(0, 70, 100, 0.3),
-      0 0 calc(var(--u) * 34) rgba(30, 190, 230, 0.7),
-      0 calc(var(--u) * 14) calc(var(--u) * 22) rgba(0, 70, 100, 0.25);
-  }
+@keyframes glow {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
 }
 
 /* changing page: the new page's tiles ripple in from the side you moved towards */
@@ -466,9 +461,7 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   border-radius: calc(var(--u) * 17);
   background:
     radial-gradient(150% 120% at 50% -60%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.15) 89%, rgba(255, 255, 255, 0) 90%),
-    rgba(255, 255, 255, 0.8);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
+    rgba(255, 255, 255, 0.9);
   box-shadow:
     var(--glass-rim),
     inset 0 calc(var(--u) * 2) calc(var(--u) * 1) rgba(255, 255, 255, 1),
@@ -788,11 +781,9 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   display: grid;
   place-items: center;
   padding: calc(var(--u) * 40);
-  background: rgba(225, 233, 231, 0.45);
-  -webkit-backdrop-filter: blur(6px) saturate(1.2);
-  backdrop-filter: blur(6px) saturate(1.2);
+  background: rgba(228, 236, 234, 0.62);
   opacity: 0;
-  transition: opacity 0.25s;
+  transition: opacity 0.3s;
 }
 
 .folder-view[hidden] { display: none; }
@@ -866,14 +857,15 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
 .menu {
   position: fixed;
   inset: 0;
-  transition: transform 0.5s var(--ease), translate 0.55s var(--ease), opacity 0.4s;
+  transition: transform 0.6s var(--smooth), translate 0.6s var(--smooth), opacity 0.45s;
+  will-change: transform, opacity;
 }
 
-/* an app opening pushes the menu back a little */
+/* an app or folder opening pushes the menu back a little */
 body.app-open .menu { transform: scale(0.94); }
+body.folder-open .menu { transform: scale(0.97); }
 
-.bg { transition: transform 0.7s var(--ease); }
-body.app-open .bg { transform: scale(1.05); }
+
 
 /* switching screens: the menu slides down and away, the TV screen drops in from above */
 body.tv-mode .menu {
@@ -889,7 +881,8 @@ body.tv-mode .menu {
   opacity: 0;
   translate: 0 calc(var(--u) * -50);
   pointer-events: none;
-  transition: opacity 0.45s, translate 0.55s var(--ease);
+  transition: opacity 0.45s, translate 0.6s var(--smooth);
+  will-change: translate, opacity;
 }
 
 .tv[hidden] { display: none; }
@@ -1020,9 +1013,7 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
   background:
     repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0 2px, rgba(255, 255, 255, 0) 2px 14px),
     linear-gradient(180deg, #f6f8f8, #e7eeec);
-  clip-path: inset(var(--t, 50%) var(--r, 50%) var(--b, 50%) var(--l, 50%) round var(--radius));
-  /* closing: the content fades first, then the window shrinks back into its tile */
-  transition: clip-path 0.42s var(--ease) 0.1s;
+  transform-origin: 0 0;
 }
 
 /* each app tints itself with its theme colour */
@@ -1039,14 +1030,11 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
 }
 
 .launch[hidden] { display: none; }
-.launch.open {
-  clip-path: inset(0 0 0 0 round 0);
-  transition-delay: 0s;
-}
+
 
 /* The tile's art flashes in the middle while the window opens, like a launch screen */
 .launch-splash {
-  position: absolute;
+  position: fixed;
   left: 50%;
   top: 50%;
   width: 140px;
@@ -1056,7 +1044,7 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  z-index: 3;
+  z-index: 11;
 }
 
 .launch-splash > * {
@@ -1066,7 +1054,7 @@ body.tv-mode .tv-hero { transform: translate(-50%, -50%) scale(1); }
   object-fit: cover;
 }
 
-.launch.open .launch-splash { animation: splash 0.75s var(--ease); }
+.launch-splash.show { animation: splash 0.8s var(--smooth); }
 
 @keyframes splash {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
