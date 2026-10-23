@@ -48,6 +48,11 @@ http
       return;
     }
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
+    // accept either Unicode form of accented names (ë as one character or as e + ¨)
+    if (!fs.existsSync(file)) {
+      const alt = [file.normalize("NFC"), file.normalize("NFD")].find((f) => f !== file && fs.existsSync(f));
+      if (alt) file = alt;
+    }
     fs.stat(file, (err, stat) => {
       if (err || !stat.isFile()) {
         res.writeHead(404, { "Content-Type": "text/plain" }).end("Not found");

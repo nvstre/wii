@@ -1,8 +1,8 @@
 // Generated from the files in music/ by scripts/scan-music.js. Run `npm run music` after adding songs.
 window.WIIU_TRACKS = [
   {
-    "file": "music/Cocoon/EARNËD IT.mp3",
-    "title": "EARNËD IT",
+    "file": "music/Cocoon/EARNËD IT.mp3",
+    "title": "EARNËD IT",
     "artist": "Yeat",
     "album": "Cocoon",
     "track": 0,
@@ -10,8 +10,8 @@ window.WIIU_TRACKS = [
     "cover": "music/Cocoon/cover.jpg"
   },
   {
-    "file": "music/Cocoon/HOLY WATËR.mp3",
-    "title": "HOLY WATËR",
+    "file": "music/Cocoon/HOLY WATËR.mp3",
+    "title": "HOLY WATËR",
     "artist": "Yeat",
     "album": "Cocoon",
     "track": 0,
@@ -28,8 +28,8 @@ window.WIIU_TRACKS = [
     "cover": "music/Cocoon/cover.jpg"
   },
   {
-    "file": "music/Cocoon/TËNNIS.mp3",
-    "title": "TËNNIS",
+    "file": "music/Cocoon/TËNNIS.mp3",
+    "title": "TËNNIS",
     "artist": "Yeat",
     "album": "Cocoon",
     "track": 0,
@@ -37,8 +37,8 @@ window.WIIU_TRACKS = [
     "cover": "music/Cocoon/cover.jpg"
   },
   {
-    "file": "music/Luh Leakyz Vol. 1/Diseasë.mp3",
-    "title": "Diseasë",
+    "file": "music/Luh Leakyz Vol. 1/Diseasë.mp3",
+    "title": "Diseasë",
     "artist": "Yeat",
     "album": "Luh Leakyz Vol. 1",
     "track": 0,
@@ -64,8 +64,8 @@ window.WIIU_TRACKS = [
     "cover": "music/Luh Leakyz Vol. 1/cover.jpeg"
   },
   {
-    "file": "music/Luh Leakyz Vol. 1/Real Trendsettër.mp3",
-    "title": "Real Trendsettër",
+    "file": "music/Luh Leakyz Vol. 1/Real Trendsettër.mp3",
+    "title": "Real Trendsettër",
     "artist": "Yeat",
     "album": "Luh Leakyz Vol. 1",
     "track": 0,
@@ -73,8 +73,8 @@ window.WIIU_TRACKS = [
     "cover": "music/Luh Leakyz Vol. 1/cover.jpeg"
   },
   {
-    "file": "music/Luh Leakyz Vol. 1/Time Passëd.mp3",
-    "title": "Time Passëd",
+    "file": "music/Luh Leakyz Vol. 1/Time Passëd.mp3",
+    "title": "Time Passëd",
     "artist": "Yeat",
     "album": "Luh Leakyz Vol. 1",
     "track": 0,

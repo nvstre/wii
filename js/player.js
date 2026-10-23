@@ -337,13 +337,21 @@ window.WiiPlayer = (() => {
 
     // queue panel: what's coming up
     $("[data-next-label]").textContent = context ? `Next from: ${context}` : "Next up";
-    const upcoming = queue.length ? queue.slice(qpos + 1, qpos + 11) : all.slice(1, 11);
+    // queue positions coming up; with repeat on, the list wraps back to the start
+    let upcoming;
+    if (queue.length) {
+      upcoming = queue.map((_, k) => k).slice(qpos + 1);
+      if (repeat === "all") upcoming.push(...queue.map((_, k) => k).slice(0, qpos));
+      upcoming = upcoming.slice(0, 10).map((k) => [k, queue[k]]);
+    } else {
+      upcoming = all.slice(1, 11).map((i) => [-1, i]);
+    }
     $("[data-next]").innerHTML =
       upcoming
-        .map((i, k) => {
+        .map(([k, i]) => {
           const u = tracks[i];
           return (
-            `<li><button class="mu-qrow" type="button" data-q="${queue.length ? qpos + 1 + k : -1}" data-i="${i}">` +
+            `<li><button class="mu-qrow" type="button" data-q="${k}" data-i="${i}">` +
             `<span class="mu-thumb">${cover(u)}</span><span class="row-text"><strong>${esc(u.title)}</strong><small>${esc(u.artist)}</small></span></button></li>`
           );
         })
