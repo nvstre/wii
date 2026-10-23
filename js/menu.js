@@ -118,6 +118,8 @@
     window.addEventListener("keydown", unlock, true);
 
     return {
+      context,
+      output: () => master,
       get muted() {
         return muted;
       },
@@ -151,6 +153,7 @@
     };
   })();
   const sfx = audio.sfx;
+  window.WiiAudio = audio;
 
   // ---- Artwork ----
 
@@ -349,7 +352,7 @@
   // Each app window takes a theme colour, like the console's own apps
   const PAGE_COLORS = {
     about: "#14bfd6", contact: "#f28c26", blog: "#4cb51c", services: "#f39a12", links: "#2c74e8",
-    videos: "#e3202b", news: "#14b3c7", downloads: "#1f86e8", credits: "#7b8786", music: "#7d3cff",
+    videos: "#e3202b", news: "#14b3c7", downloads: "#1f86e8", credits: "#7b8786", music: "#1aa7ec",
   };
   // Pages that play their own sound, so the menu music fades out while they're open
   const QUIET = { music: true, videos: true };
@@ -573,7 +576,32 @@
       el.style.setProperty("--n", Math.min(i, 8));
     });
     Pages.mount(launchBody);
+    launchEl.dataset.route = id;
+    sky(id === "music");
+    if (window.WiiPlayer) id === "music" ? WiiPlayer.mount(launchBody) : WiiPlayer.unmount();
     document.title = `${route.title} · ${user.name || "Portfolio"}`;
+  }
+
+  // The Music app's Frutiger Aero sky: soap bubbles drifting up behind the content
+  let skyEl = null;
+  function sky(on) {
+    if (on && !skyEl) {
+      skyEl = document.createElement("div");
+      skyEl.className = "aero-sky";
+      skyEl.setAttribute("aria-hidden", "true");
+      for (let i = 0; i < 18; i++) {
+        const b = document.createElement("span");
+        const size = 18 + Math.random() * 74;
+        b.style.cssText =
+          `left:${(Math.random() * 100).toFixed(1)}%;--s:${size.toFixed(0)}px;--d:${(16 + Math.random() * 18).toFixed(1)}s;` +
+          `--delay:${(-Math.random() * 34).toFixed(1)}s;--sway:${(Math.random() * 90 - 45).toFixed(0)}px`;
+        skyEl.appendChild(b);
+      }
+      launchEl.prepend(skyEl);
+    } else if (!on && skyEl) {
+      skyEl.remove();
+      skyEl = null;
+    }
   }
 
   // Moving between pages inside the window: old content slides away, new content slides in.
@@ -640,6 +668,7 @@
     launchEl.classList.remove("open");
     document.body.classList.remove("app-open");
     audio.duck(false);
+    if (window.WiiPlayer) WiiPlayer.unmount();
     current = null;
     stack = [];
     document.title = `${user.name || "Your Name"} · Portfolio`;

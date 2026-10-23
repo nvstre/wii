@@ -6,6 +6,14 @@ const path = require("path");
 const root = __dirname;
 const port = Number(process.argv[2] || process.env.PORT || 8080);
 
+// Rebuild the Music app's song list from whatever is in music/
+try {
+  const songs = require("./scripts/scan-music").scan();
+  console.log(`Music: ${songs} song${songs === 1 ? "" : "s"} in music/`);
+} catch (e) {
+  console.log(`Music: couldn't read music/ (${e.message})`);
+}
+
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -22,6 +30,10 @@ const TYPES = {
   ".ogg": "audio/ogg",
   ".wav": "audio/wav",
   ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
+  ".oga": "audio/ogg",
+  ".opus": "audio/ogg",
+  ".flac": "audio/flac",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
   ".woff2": "font/woff2",

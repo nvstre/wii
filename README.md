@@ -25,7 +25,7 @@ Everything lives in `js/config.js`. Anything marked "Placeholder" is yours to re
 | Mii icon (top left) | About Me page | `user` |
 | Grid tiles | Projects, links | `apps` |
 | Folder tiles | Groups of projects (add an `apps` list) | `apps` |
-| Music tile | Music app (Spotify player + albums) | `pages.music` |
+| Music tile | Music app playing your songs from `music/` | `pages.music`, `music/` |
 | Friend List | Contact / socials | `pages.contact` |
 | Community | Blog / dev log | `pages.blog` |
 | Shop | Services | `pages.services` |
@@ -36,7 +36,7 @@ Everything lives in `js/config.js`. Anything marked "Placeholder" is yours to re
 | Storage icon (bottom left) | About this site | `pages.credits` |
 | Switch-screens button | TV screen intro | `tv` |
 
-- Music: in Spotify, open the artist or an album, then ⋯ → Share → Copy link, and paste it into `spotify` in `pages.music`. It then plays inside the app (full songs for visitors logged into Spotify, previews for everyone else). The menu music fades out while the Music or Videos app is open.
+- Music: drop audio files into `music/` (one folder per album, see `music/README.md`). `npm start` builds the song list automatically; `npm run music` does it on its own. Commit the songs together with `music/tracks.js` and `music/covers/`. The menu music fades out while the Music or Videos app is open, and closing the Music app stops the song.
 - Game and album covers: run `npm run covers` once (needs internet). It downloads each cover from its Wikipedia page into `img/games/` and `img/music/`. Any game without a cover shows its coloured title card instead. To use your own picture, save it over the file in `img/games/`.
 - Project screenshots: put images in `img/` and list them in the project's `images` (the first one is the big picture).
 - Your Mii: replace `img/avatar.png` (square, transparent background looks best).

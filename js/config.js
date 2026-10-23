@@ -196,17 +196,18 @@ window.WIIU_CONFIG = {
   cornerRight: { title: "Switch Screens",  glyph: "swap", action: "tv" },
 
   pages: {
-    // Music app. Paste Spotify links (in Spotify: ⋯ → Share → Copy link) to play inside the app;
-    // without one, a button opens the album in Spotify instead. "wiki" lets `npm run covers` fetch the cover.
+    // Music app: plays the songs you put in the music/ folder (see music/README.md).
+    // "albums" are only used for covers: `npm run covers` fetches them from Wikipedia,
+    // and songs from those albums without their own artwork use them.
     music: {
       artist: "Yeat",
-      spotify: "",   // Yeat's artist link: https://open.spotify.com/artist/...
+      spotify: "",   // optional: a Spotify link shown while there are no songs yet
       albums: [
-        { title: "Up 2 Më", year: "2021", wiki: "Up_2_Më", icon: "img/music/up-2-me.jpg", color: "#3a3a3a", color2: "#0d0d0d", spotify: "" },
-        { title: "2 Alivë", year: "2022", wiki: "2_Alivë", icon: "img/music/2-alive.jpg", color: "#c0392b", color2: "#2b0a0a", spotify: "" },
-        { title: "AftërLyfe", year: "2023", wiki: "AftërLyfe", icon: "img/music/afterlyfe.jpg", color: "#8d99ae", color2: "#2b2d42", spotify: "" },
-        { title: "2093", year: "2024", wiki: "2093_(album)", icon: "img/music/2093.jpg", color: "#8b0000", color2: "#0b0b0b", spotify: "" },
-        { title: "Lyfestyle", year: "2024", wiki: "Lyfestyle", icon: "img/music/lyfestyle.jpg", color: "#d4ac0d", color2: "#5c4400", spotify: "" },
+        { title: "Up 2 Më", wiki: "Up_2_Më", icon: "img/music/up-2-me.jpg" },
+        { title: "2 Alivë", wiki: "2_Alivë", icon: "img/music/2-alive.jpg" },
+        { title: "AftërLyfe", wiki: "AftërLyfe", icon: "img/music/afterlyfe.jpg" },
+        { title: "2093", wiki: "2093_(album)", icon: "img/music/2093.jpg" },
+        { title: "Lyfestyle", wiki: "Lyfestyle", icon: "img/music/lyfestyle.jpg" },
       ],
     },
     contact: {
