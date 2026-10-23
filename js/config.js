@@ -36,16 +36,19 @@ window.WIIU_CONFIG = {
       title: "Web Projects", label: "Web", color: "#e9505c",
       apps: [
         {
-          title: "Project One", label: "P1", color: "#2fa8e0", year: "2025", role: "Solo project",
-          description: "Placeholder: what this project is, who it's for and what problem it solves.\n\nA second paragraph about how you built it and what you learned.",
-          tech: ["JavaScript", "CSS"],
-          links: [{ label: "Live site", url: "https://example.com" }, { label: "Source code", url: "https://github.com" }],
+          title: "LeonidaLink", icon: "img/projects/leonidalink.jpg", color: "#d23d9f",
+          description: "Placeholder: what LeonidaLink is, who it's for and what it does.",
+          // links: [{ label: "Visit site", url: "https://..." }],
         },
         {
-          title: "Project Two", label: "P2", color: "#7cc242", year: "2024", role: "Team of 3",
-          description: "Placeholder: a short description of the project.",
-          tech: ["React", "Node.js"],
-          links: [{ label: "Source code", url: "https://github.com" }],
+          title: "UtopiaRPG", icon: "img/projects/utopiarpg.jpg", color: "#4f9fd9",
+          description: "Placeholder: what UtopiaRPG is, who it's for and what it does.",
+          // links: [{ label: "Visit site", url: "https://..." }],
+        },
+        {
+          title: "GDMP", label: "GDMP", color: "#2fae6b",
+          description: "Placeholder: what GDMP is, who it's for and what it does.",
+          // links: [{ label: "Visit site", url: "https://..." }],
         },
       ],
     },
