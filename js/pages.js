@@ -224,10 +224,75 @@ window.WiiPages = (() => {
     return `<div class="card">${paras(data.text)}</div>`;
   }
 
-  const builtIn = { contact, blog, services, links, videos, news, downloads, credits: text };
+  // ---- Music: Spotify's embedded player, fed by links from the config ----
+
+  const spotifyEmbed = (url) => {
+    const m = /open\.spotify\.com\/(?:intl-[\w-]+\/)?(artist|album|track|playlist)\/([A-Za-z0-9]+)/.exec(url || "");
+    return m ? { src: `https://open.spotify.com/embed/${m[1]}/${m[2]}?utm_source=generator&theme=0`, tall: m[1] !== "track" } : null;
+  };
+  const spotifySearch = (q) => `https://open.spotify.com/search/${encodeURIComponent(q)}`;
+  const playerFrame = (e) =>
+    `<iframe src="${esc(e.src)}" height="${e.tall ? 352 : 152}" title="Spotify player" loading="lazy" ` +
+    'allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>';
+
+  function music(data) {
+    const artist = data.artist || "Artist";
+    const albums = data.albums || [];
+    const main = spotifyEmbed(data.spotify);
+    return (
+      '<section class="music">' +
+      '<div class="music-hero card">' +
+      `<div class="disc" aria-hidden="true"><span>${initial(artist)}</span></div>` +
+      `<div class="row-text"><small>Artist</small><h2>${esc(artist)}</h2>` +
+      `<p class="meta">${albums.length} album${albums.length === 1 ? "" : "s"}</p>` +
+      `<div class="actions"><a class="pill primary" href="${esc(data.spotify || spotifySearch(artist))}" target="_blank" rel="noopener">Open in Spotify</a></div>` +
+      "</div></div>" +
+      `<div class="player card" data-player>${
+        main ? playerFrame(main) : `<p class="player-note">Pick an album below, or add ${esc(artist)}'s Spotify link in <code>js/config.js</code> to play here.</p>`
+      }</div>` +
+      (albums.length
+        ? '<div class="albums">' +
+          albums
+            .map((a) => {
+              const e = spotifyEmbed(a.spotify);
+              const target = e
+                ? `data-embed="${esc(e.src)}" data-tall="${e.tall ? 1 : 0}"`
+                : `data-href="${esc(spotifySearch(`${artist} ${a.title}`))}"`;
+              return (
+                `<button class="album" type="button" ${target}>` +
+                `<span class="album-art">${tileArt({ ...a, game: true, label: a.title })}</span>` +
+                `<strong>${esc(a.title)}</strong><small>${esc(a.year || "")}${e ? "" : " · Opens Spotify"}</small>` +
+                "</button>"
+              );
+            })
+            .join("") +
+          "</div>"
+        : "") +
+      "</section>"
+    );
+  }
+
+  const builtIn = { contact, blog, services, links, videos, news, downloads, music, credits: text };
 
   // Wire up the bits of a rendered page that need behaviour.
   function mount(root) {
+    // Albums: play in the player when they have a Spotify link, otherwise open Spotify search
+    root.querySelectorAll(".album").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (btn.dataset.href) return window.open(btn.dataset.href, "_blank", "noopener");
+        const player = root.querySelector("[data-player]");
+        const frame = document.createElement("iframe");
+        frame.src = btn.dataset.embed;
+        frame.height = btn.dataset.tall === "1" ? "352" : "152";
+        frame.title = "Spotify player";
+        frame.allow = "autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture";
+        player.replaceChildren(frame);
+        root.querySelectorAll(".album.playing").forEach((el) => el.classList.remove("playing"));
+        btn.classList.add("playing");
+        player.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    });
+
     root.querySelectorAll("[data-yeah]").forEach((btn) => {
       const key = `wiiu-yeah:${btn.dataset.yeah}`;
       const read = () => {

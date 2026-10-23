@@ -80,6 +80,9 @@
       ? fetch(music.src).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null)
       : Promise.resolve(null);
     let musicStarted = false;
+    let musicGain = null;
+    let ducked = false;
+    const musicVolume = () => (music && music.volume != null ? music.volume : 0.35);
 
     async function startMusic() {
       if (musicStarted || !music) return;
@@ -98,7 +101,8 @@
         }
         const fade = c.createGain();
         fade.gain.setValueAtTime(0, c.currentTime);
-        fade.gain.linearRampToValueAtTime(music.volume == null ? 0.35 : music.volume, c.currentTime + 2);
+        if (!ducked) fade.gain.linearRampToValueAtTime(musicVolume(), c.currentTime + 2);
+        musicGain = fade;
         src.connect(fade).connect(master);
         src.start(0, music.loopStart || 0);
       } catch (e) {}
@@ -116,6 +120,14 @@
     return {
       get muted() {
         return muted;
+      },
+      duck(on) {
+        if (on === ducked) return;
+        ducked = on;
+        if (musicGain) {
+          musicGain.gain.cancelScheduledValues(ctx.currentTime);
+          musicGain.gain.setTargetAtTime(on ? 0 : musicVolume(), ctx.currentTime, 0.3);
+        }
       },
       setMuted(on) {
         muted = on;
@@ -327,7 +339,7 @@
 
   const PAGE_TITLES = {
     contact: "Contact", blog: "Blog", services: "Services", links: "Links",
-    videos: "Videos", news: "News", downloads: "Downloads", credits: "About This Site",
+    videos: "Videos", news: "News", downloads: "Downloads", credits: "About This Site", music: "Music",
   };
   const routes = {};
   const routeOf = new Map();
@@ -337,8 +349,10 @@
   // Each app window takes a theme colour, like the console's own apps
   const PAGE_COLORS = {
     about: "#14bfd6", contact: "#f28c26", blog: "#4cb51c", services: "#f39a12", links: "#2c74e8",
-    videos: "#e3202b", news: "#14b3c7", downloads: "#1f86e8", credits: "#7b8786",
+    videos: "#e3202b", news: "#14b3c7", downloads: "#1f86e8", credits: "#7b8786", music: "#7d3cff",
   };
+  // Pages that play their own sound, so the menu music fades out while they're open
+  const QUIET = { music: true, videos: true };
   routes.about = { title: user.name || "About Me", icon: avatarMarkup(), color: PAGE_COLORS.about, render: () => Pages.about(user) };
   Object.keys(Pages.builtIn).forEach((name) => {
     routes[name] = {
@@ -348,7 +362,7 @@
       render: () => Pages.builtIn[name]((config.pages || {})[name] || {}, user),
     };
   });
-  [...dockItems, config.cornerLeft].forEach((item) => {
+  [...dockItems, config.cornerLeft, ...apps].forEach((item) => {
     if (item && item.page && routes[item.page]) {
       routes[item.page].title = item.title || routes[item.page].title;
       routes[item.page].icon = iconMarkup(item);
@@ -538,11 +552,12 @@
   }
 
   // Containers whose children rise one by one instead of the container as a whole
-  const RISE_GROUPS = ".project, .about, .list, .posts, .shop-grid, .videos";
+  const RISE_GROUPS = ".project, .about, .list, .posts, .shop-grid, .videos, .music";
 
   function render(id) {
     const route = routes[id];
     launchEl.style.setProperty("--app", route.color || "#14bfd6");
+    audio.duck(Boolean(QUIET[id]));
     launchTitle.textContent = route.title;
     launchIcon.innerHTML = route.icon || "";
     launchBody.innerHTML = route.render();
@@ -624,6 +639,7 @@
     sfx.back();
     launchEl.classList.remove("open");
     document.body.classList.remove("app-open");
+    audio.duck(false);
     current = null;
     stack = [];
     document.title = `${user.name || "Your Name"} · Portfolio`;

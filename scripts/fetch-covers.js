@@ -1,4 +1,4 @@
-// Downloads cover art for the game tiles from their Wikipedia pages.
+// Downloads cover art for the game tiles and music albums from their Wikipedia pages.
 // Run `npm run covers` (add --force to re-download). Needs Node 18+ and an internet connection.
 const fs = require("fs");
 const path = require("path");
@@ -11,14 +11,16 @@ const UA = "wiiu-menu-portfolio/1.0 (cover fetch script)";
 const sandbox = { window: {} };
 vm.runInNewContext(fs.readFileSync(path.join(root, "js/config.js"), "utf8"), sandbox);
 
+// Everything in the config with an icon path and a Wikipedia page: game tiles, album covers...
 const games = [];
-(function walk(list) {
-  (list || []).forEach((item) => {
-    if (Array.isArray(item.apps)) walk(item.apps);
-    const wiki = (item.links || []).find((l) => /wikipedia\.org\/wiki\//.test(l.url));
-    if (item.game && item.icon && wiki) games.push({ title: item.title, file: item.icon, page: decodeURIComponent(wiki.url.split("/wiki/")[1]) });
-  });
-})(sandbox.window.WIIU_CONFIG.apps);
+(function walk(node) {
+  if (Array.isArray(node)) return node.forEach(walk);
+  if (!node || typeof node !== "object") return;
+  const link = (Array.isArray(node.links) ? node.links : []).find((l) => l && /wikipedia\.org\/wiki\//.test(l.url));
+  const page = node.wiki || (link && decodeURIComponent(link.url.split("/wiki/")[1]));
+  if (node.icon && page && /^img\/(games|music)\//.test(node.icon)) games.push({ title: node.title, file: node.icon, page });
+  Object.values(node).forEach(walk);
+})(sandbox.window.WIIU_CONFIG);
 
 async function coverUrl(page) {
   const api = new URL("https://en.wikipedia.org/w/api.php");

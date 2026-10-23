@@ -1596,6 +1596,132 @@ a.row:hover { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.95), 0 0 0 2px var(--a
 
 body.tv-mode .corner-right { z-index: 9; }
 
+/* Music */
+.music-hero {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.music-hero h2 { font-size: 40px; }
+.music-hero .actions { margin-top: 10px; }
+
+/* a record that spins while the app is open */
+.disc {
+  position: relative;
+  flex: 0 0 auto;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: repeating-radial-gradient(circle, #1c1c24 0 2px, #2b2b36 2px 4px);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.95), 0 0 0 5px rgba(115, 142, 134, 0.3), 0 10px 22px rgba(0, 0, 0, 0.3);
+  animation: spin 5s linear infinite;
+}
+
+.disc::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 20deg, rgba(255, 255, 255, 0) 0 12%, rgba(255, 255, 255, 0.22) 18%, rgba(255, 255, 255, 0) 24% 62%, rgba(255, 255, 255, 0.16) 68%, rgba(255, 255, 255, 0) 74%);
+}
+
+.disc span {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 20px;
+  background: linear-gradient(135deg, var(--app-hi), var(--app));
+  box-shadow: inset 0 0 0 4px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes spin { to { rotate: 360deg; } }
+
+.player { padding: 10px; }
+
+.player iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+}
+
+.player-note {
+  margin: 14px;
+  text-align: center;
+  color: #6a7473;
+}
+
+.player-note code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--app-tint);
+  font-size: 14px;
+}
+
+.albums {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.album {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 10px 12px;
+  border-radius: 16px;
+  text-align: left;
+  background:
+    radial-gradient(150% 120% at 50% -60%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.15) 89%, rgba(255, 255, 255, 0) 90%),
+    rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.95),
+    0 0 0 2px rgba(115, 142, 134, 0.22),
+    0 6px 16px rgba(30, 62, 52, 0.1);
+  transition: transform 0.2s var(--pop), box-shadow 0.2s;
+}
+
+.album:hover { transform: translateY(-4px); }
+.album:active { scale: 0.96; }
+
+.album.playing {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.95),
+    0 0 0 3px var(--app),
+    0 0 18px var(--app-hi),
+    0 6px 16px rgba(30, 62, 52, 0.1);
+}
+
+.album-art {
+  display: block;
+  aspect-ratio: 1;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2), 0 3px 8px rgba(0, 0, 0, 0.18);
+}
+
+.album-art > .tile-art {
+  font-size: 18px;
+  width: 100%;
+  height: 100%;
+}
+
+.album small { color: #6a7473; font-size: 13px; }
+
+@media (max-width: 560px) {
+  .music-hero { flex-direction: column; text-align: center; }
+  .music-hero .actions { justify-content: center; }
+}
+
 /* ---- Start-up ---- */
 
 /* a white screen that fades into the menu */
