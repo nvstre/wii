@@ -94,7 +94,10 @@ function audioFiles(folder) {
   });
 }
 
-const rel = (file) => path.relative(root, file).split(path.sep).join("/");
+// NFC everywhere: macOS hands back names like "ë" as e + ¨, but git stores the composed form,
+// so a decomposed path in tracks.js would 404 once the site is on a normal web host.
+const nfc = (s) => String(s || "").normalize("NFC");
+const rel = (file) => nfc(path.relative(root, file).split(path.sep).join("/"));
 const norm = (s) => String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
 function scan() {
@@ -131,9 +134,9 @@ function scan() {
 
     return {
       file: rel(file),
-      title: tags.TIT2 || (numbered ? numbered[2] : base),
-      artist: tags.TPE1 || musicCfg.artist || "",
-      album,
+      title: nfc(tags.TIT2 || (numbered ? numbered[2] : base)),
+      artist: nfc(tags.TPE1 || musicCfg.artist || ""),
+      album: nfc(album),
       track: parseInt(tags.TRCK, 10) || (numbered ? Number(numbered[1]) : 0),
       year: (tags.TYER || tags.TDRC || "").slice(0, 4),
       cover,
