@@ -39,126 +39,237 @@ window.WiiPages = (() => {
         (item.icon ? `<img class="cover" src="${esc(item.icon)}" alt="" draggable="false">` : "") +
         "</span>";
 
+  // ---- Shared pieces ----
+
+  const hueOf = (s) => [...String(s || "")].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 11);
+  const count = (n, one, many) => `${n} ${n === 1 ? one : many || `${one}s`}`;
+
+  // A coloured banner across the top of a page, in the app's theme colour
+  const banner = (site, name, { kicker = "", title = "", sub = "", actions = "" } = {}) => {
+    const r = (site && site.route(name)) || {};
+    return (
+      `<header class="pg-banner">${fizz()}<span class="pg-orb">${r.icon || ""}</span>` +
+      '<div class="pg-banner-text">' +
+      (kicker ? `<small>${esc(kicker)}</small>` : "") +
+      `<h2>${esc(title || r.title || "")}</h2>` +
+      (sub ? `<p>${esc(sub)}</p>` : "") +
+      (actions ? `<div class="actions">${actions}</div>` : "") +
+      "</div></header>"
+    );
+  };
+
+  // What a page shows when there's nothing in it yet
+  const emptyState = (site, name, title, text) => {
+    const r = (site && site.route(name)) || {};
+    return `<div class="pg-empty card"><span class="pg-orb">${r.icon || ""}</span><h3>${esc(title)}</h3><p>${esc(text)}</p></div>`;
+  };
+
+  // A row of tiles linking to other pages on the site
+  const shelf = (title, items) =>
+    items.length
+      ? `<section class="card shelf"><h3>${esc(title)}</h3><div class="shelf-row stagger">` +
+        items
+          .map(
+            (r) =>
+              `<a class="shelf-tile" href="#/${esc(r.id)}"><span class="shelf-art">${r.icon || ""}</span>` +
+              `<strong>${esc(r.title)}</strong>${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</a>`
+          )
+          .join("") +
+        "</div></section>"
+      : "";
+
+  const shortcuts = (site, ids) => ids.map((id) => site.route(id)).filter((r) => r && r.icon);
+
   // ---- Pages ----
 
-  function project(p) {
+  function project(p, site, id) {
     const images = p.images || [];
-    const hero = images[0] ? `<img src="${esc(images[0])}" alt="">` : tileArt(p);
+    const me = site.projects.find((x) => x.id === id) || {};
+    const kind = p.game ? "Game" : me.folder || "Project";
     const meta = [p.year, p.role].filter(Boolean).map(esc).join(" · ");
-    const gallery = images.slice(1);
+    const art = images[0] ? `<img src="${esc(images[0])}" alt="">` : tileArt(p);
+    const backdrop = p.icon || images[0];
+    const links = p.links || [];
+
+    // more from the same folder, or else more of the same kind
+    let more = site.projects.filter((x) => x.id !== id && (p.game ? x.game : !x.game && x.folder === me.folder));
+    if (!more.length) more = site.projects.filter((x) => x.id !== id && x.game === Boolean(p.game));
+    if (!more.length) more = site.projects.filter((x) => x.id !== id);
+
+    const details = [
+      ["Category", kind],
+      ["Year", p.year],
+      [p.game ? "Developer" : "Role", p.role],
+    ].filter(([, v]) => v);
+
     return (
-      '<article class="project">' +
-      `<div class="project-hero card">${hero}</div>` +
-      '<div class="project-info card">' +
-      `<h2>${esc(p.title)}</h2>` +
-      (meta ? `<p class="meta">${meta}</p>` : "") +
-      paras(p.description || p.summary) +
-      chips(p.tech) +
-      (p.links && p.links.length ? `<div class="actions">${p.links.map((l, i) => button(l, i === 0)).join("")}</div>` : "") +
-      "</div>" +
-      (gallery.length
-        ? `<div class="gallery">${gallery.map((src) => `<a class="card" href="${esc(src)}" target="_blank" rel="noopener"><img src="${esc(src)}" alt="" loading="lazy"></a>`).join("")}</div>`
+      `<header class="pj-hero" style="--c:${esc(p.color || "#14bfd6")};--c2:${esc(p.color2 || p.color || "#0b8eab")}">` +
+      (backdrop ? `<span class="pj-backdrop" style="background-image:url('${esc(fileUrl(backdrop))}')"></span>` : "") +
+      fizz() +
+      `<span class="pj-cover">${art}</span>` +
+      '<div class="pj-hero-text">' +
+      `<small>${esc(kind)}</small><h2>${esc(p.title)}</h2>` +
+      (meta ? `<p>${meta}</p>` : "") +
+      (links.length ? `<div class="actions">${links.map((l, i) => button(l, i === 0)).join("")}</div>` : "") +
+      "</div></header>" +
+      '<div class="pj-cols">' +
+      `<div class="card"><h3>About</h3>${paras(p.description || p.summary) || '<p class="meta">More details coming soon.</p>'}</div>` +
+      '<aside class="card pj-details"><h3>Details</h3>' +
+      (details.length ? `<dl class="facts">${details.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>` : "") +
+      (p.tech && p.tech.length ? `<h4>${p.game ? "Tags" : "Built with"}</h4>${chips(p.tech)}` : "") +
+      "</aside></div>" +
+      (images.length > 1
+        ? `<section class="card"><h3>Screenshots</h3><div class="gallery">${images
+            .slice(1)
+            .map((src) => `<a href="${esc(src)}" target="_blank" rel="noopener"><img src="${esc(src)}" alt="" loading="lazy"></a>`)
+            .join("")}</div></section>`
         : "") +
-      "</article>"
+      shelf(p.game ? "More games" : `More from ${kind}`, more.slice(0, 8).map((x) => ({ ...x, sub: x.game ? "Game" : x.folder })))
     );
   }
 
-  function about(user) {
+  function about(user, site) {
     const facts = user.facts || [];
+    const projects = site.projects.filter((x) => !x.game).length;
+    const games = site.projects.filter((x) => x.game).length;
+    const stats = [
+      { n: projects, label: "Projects" },
+      { n: games, label: "Games" },
+      { n: site.songs, label: "Songs", href: "#/music" },
+      { n: site.hobbies.length, label: "Hobbies", href: "#/hobbies" },
+    ];
     return (
-      '<section class="about">' +
-      '<div class="about-head card">' +
+      '<header class="ab-hero">' +
+      fizz() +
       `<div class="mii-frame">${avatar(user)}</div>` +
-      `<div><h2>${esc(user.name)}</h2>${user.tagline ? `<p class="meta">${esc(user.tagline)}</p>` : ""}</div>` +
+      '<div class="pg-banner-text">' +
+      '<small>Profile</small>' +
+      `<h2>${esc(user.name)}</h2>` +
+      (user.tagline ? `<p>${esc(user.tagline)}</p>` : "") +
+      '<span class="online">Online</span>' +
+      '<div class="actions"><a class="pill primary" href="#/contact">Get in touch</a><a class="pill" href="#/hobbies">My hobbies</a></div>' +
+      "</div></header>" +
+      '<div class="stats stagger">' +
+      stats
+        .map((s) => {
+          const inner = `<b>${s.n}</b><span>${esc(s.label)}</span>`;
+          return s.href ? `<a class="stat" href="${s.href}">${inner}</a>` : `<div class="stat">${inner}</div>`;
+        })
+        .join("") +
       "</div>" +
-      (user.bio ? `<div class="card">${paras(user.bio)}</div>` : "") +
-      (user.skills && user.skills.length ? `<div class="card"><h3>Skills</h3>${chips(user.skills)}</div>` : "") +
-      (facts.length
-        ? `<div class="card"><dl class="facts">${facts.map((f) => `<dt>${esc(f.label)}</dt><dd>${esc(f.value)}</dd>`).join("")}</dl></div>`
-        : "") +
-      '<div class="actions"><a class="pill primary" href="#/contact">Get in touch</a></div>' +
-      "</section>"
+      '<div class="pj-cols">' +
+      `<div class="card"><h3>About me</h3>${paras(user.bio) || '<p class="meta">More about me coming soon.</p>'}</div>` +
+      '<aside class="card">' +
+      (user.skills && user.skills.length ? `<h3>Skills</h3>${chips(user.skills)}` : "") +
+      (facts.length ? `<h3 class="spaced">Quick facts</h3><dl class="facts">${facts.map((f) => `<dt>${esc(f.label)}</dt><dd>${esc(f.value)}</dd>`).join("")}</dl>` : "") +
+      "</aside></div>" +
+      shelf("Explore", shortcuts(site, ["hobbies", "music", "contact", "blog", "links", "videos"]))
     );
   }
 
-  function contact(data) {
+  function contact(data, user, site) {
     const friends = (data.friends || []).slice();
     if (data.email) friends.unshift({ name: "Email", handle: data.email, url: `mailto:${data.email}`, color: "#14bfd6" });
     return (
-      (data.intro ? `<div class="card intro">${paras(data.intro)}</div>` : "") +
+      banner(site, "contact", { kicker: user.name, sub: friends.length ? `${count(friends.length, "friend")} · say hi!` : "" }) +
+      '<div class="fl-me card">' +
+      `<span class="mii-frame">${avatar(user)}</span>` +
+      `<div class="row-text"><strong>${esc(user.name)}</strong>${user.tagline ? `<small>${esc(user.tagline)}</small>` : ""}${paras(data.intro)}</div>` +
+      '<span class="online">Online</span>' +
+      "</div>" +
       (friends.length
-        ? '<ul class="list friends">' +
+        ? '<div class="fl-grid stagger">' +
           friends
             .map(
               (f) =>
-                `<li><a class="row card" href="${esc(f.url)}"${external(f.url)}>` +
-                `<span class="badge-icon" style="--c:${esc(f.color || "#14bfd6")}">${initial(f.name)}</span>` +
-                `<span class="row-text"><strong>${esc(f.name)}</strong><small>${esc(f.handle || host(f.url))}</small></span>` +
-                '<span class="pill">Open</span></a></li>'
-            )
-            .join("") +
-          "</ul>"
-        : empty("No friends added yet."))
-    );
-  }
-
-  function blog(data, user) {
-    const posts = data.posts || [];
-    if (!posts.length) return empty("No posts yet.");
-    return (
-      '<div class="posts">' +
-      posts
-        .map(
-          (post, i) =>
-            '<article class="post card">' +
-            `<header><span class="post-mii">${avatar(user)}</span><span class="row-text"><strong>${esc(user.name)}</strong><small>${date(post.date)}</small></span></header>` +
-            (post.title ? `<h3>${esc(post.title)}</h3>` : "") +
-            paras(post.text) +
-            (post.image ? `<img class="post-image" src="${esc(post.image)}" alt="" loading="lazy">` : "") +
-            `<footer><button class="yeah" type="button" data-yeah="${esc(post.id || post.title || i)}">Yeah!</button></footer>` +
-            "</article>"
-        )
-        .join("") +
-      "</div>"
-    );
-  }
-
-  function services(data) {
-    const items = data.items || [];
-    return (
-      (data.intro ? `<div class="card intro">${paras(data.intro)}</div>` : "") +
-      (items.length
-        ? '<div class="shop-grid">' +
-          items
-            .map(
-              (s) =>
-                '<div class="shop-item card">' +
-                (s.price ? `<span class="price">${esc(s.price)}</span>` : "") +
-                `<h3>${esc(s.title)}</h3>${paras(s.text)}` +
-                '<div class="actions"><a class="pill primary" href="#/contact">Get in touch</a></div>' +
-                "</div>"
+                `<a class="fl-card" href="${esc(f.url)}"${external(f.url)} style="--c:${esc(f.color || "#14bfd6")}">` +
+                `<span class="fl-head"></span><span class="fl-avatar">${initial(f.name)}</span>` +
+                `<strong>${esc(f.name)}</strong><small>${esc(f.handle || host(f.url))}</small><span class="fl-go">Open</span></a>`
             )
             .join("") +
           "</div>"
-        : empty("Nothing on offer right now."))
+        : emptyState(site, "contact", "No friends yet", "Links to my profiles will show up here."))
     );
   }
 
-  function links(data) {
-    const list = data.links || [];
-    if (!list.length) return empty("No bookmarks yet.");
+  function blog(data, user, site) {
+    const posts = data.posts || [];
+    const communities = site.hobbies.filter((h) => h.route);
     return (
-      '<ul class="list">' +
-      list
-        .map(
-          (l) =>
-            `<li><a class="row card go" href="${esc(l.url)}"${external(l.url)}>` +
-            `<span class="badge-icon globe">${initial(l.title || host(l.url))}</span>` +
-            `<span class="row-text"><strong>${esc(l.title || host(l.url))}</strong><small>${esc(host(l.url))}${l.note ? ` · ${esc(l.note)}` : ""}</small></span>` +
-            "</a></li>"
-        )
-        .join("") +
-      "</ul>"
+      banner(site, "blog", { kicker: "Community", title: `${user.name}'s Posts`, sub: posts.length ? count(posts.length, "post") : "" }) +
+      '<div class="mv-cols">' +
+      (posts.length
+        ? '<div class="posts">' +
+          posts
+            .map(
+              (post, i) =>
+                '<article class="post card">' +
+                `<header><span class="post-mii">${avatar(user)}</span><span class="row-text"><strong>${esc(user.name)}</strong><small>${date(post.date)}</small></span></header>` +
+                (post.title ? `<h3>${esc(post.title)}</h3>` : "") +
+                paras(post.text) +
+                (post.image ? `<img class="post-image" src="${esc(post.image)}" alt="" loading="lazy">` : "") +
+                `<footer><button class="yeah" type="button" data-yeah="${esc(post.id || post.title || i)}">Yeah!</button></footer>` +
+                "</article>"
+            )
+            .join("") +
+          "</div>"
+        : `<div class="posts">${emptyState(site, "blog", "No posts yet", "Check back soon for updates.")}</div>`) +
+      '<aside class="mv-side">' +
+      `<div class="card mv-me"><span class="mii-frame">${avatar(user)}</span><strong>${esc(user.name)}</strong>` +
+      `<div class="mv-counts"><span><b>${posts.length}</b>Posts</span><span><b>${communities.length}</b>Communities</span></div></div>` +
+      (communities.length
+        ? '<div class="card"><h3>Communities</h3><ul class="mv-comms">' +
+          communities.map((h) => `<li><a href="#/${esc(h.route)}"><span class="mv-badge">${hobbyBadge(h)}</span>${esc(h.title)}</a></li>`).join("") +
+          "</ul></div>"
+        : "") +
+      "</aside></div>"
+    );
+  }
+
+  function services(data, user, site) {
+    const items = data.items || [];
+    return (
+      banner(site, "services", { kicker: "Shop", title: "Services", sub: items.length ? count(items.length, "service") : "" }) +
+      (data.intro ? `<div class="card intro">${paras(data.intro)}</div>` : "") +
+      (items.length
+        ? '<div class="sh-grid stagger">' +
+          items
+            .map((s) => {
+              const h = hueOf(s.title);
+              return (
+                '<div class="sh-card">' +
+                `<span class="sh-art" style="--c:hsl(${h} 80% 58%);--c2:hsl(${(h + 40) % 360} 75% 42%)">${fizz(2)}<b>${initial(s.title)}</b></span>` +
+                `<div class="sh-body"><h3>${esc(s.title)}</h3>${paras(s.text)}` +
+                `<div class="sh-foot">${s.price ? `<span class="price">${esc(s.price)}</span>` : ""}<a class="pill primary" href="#/contact">Get in touch</a></div>` +
+                "</div></div>"
+              );
+            })
+            .join("") +
+          "</div>"
+        : emptyState(site, "services", "Nothing on offer right now", "Check back soon."))
+    );
+  }
+
+  function links(data, user, site) {
+    const list = data.links || [];
+    return (
+      banner(site, "links", { kicker: "Internet Browser", title: "Bookmarks", sub: list.length ? count(list.length, "bookmark") : "" }) +
+      (list.length
+        ? '<div class="br-grid stagger">' +
+          list
+            .map((l) => {
+              const name = l.title || host(l.url);
+              const h = hueOf(host(l.url));
+              return (
+                `<a class="br-tile" href="${esc(l.url)}"${external(l.url)}>` +
+                `<span class="br-thumb" style="--c:hsl(${h} 70% 55%);--c2:hsl(${(h + 35) % 360} 75% 40%)">` +
+                `<span class="br-chrome"><i></i><i></i><i></i><em>${esc(host(l.url))}</em></span><b>${initial(name)}</b></span>` +
+                `<strong>${esc(name)}</strong>${l.note ? `<small>${esc(l.note)}</small>` : `<small>${esc(host(l.url))}</small>`}</a>`
+              );
+            })
+            .join("") +
+          "</div>"
+        : emptyState(site, "links", "No bookmarks yet", "Favourite links will show up here."))
     );
   }
 
@@ -171,57 +282,71 @@ window.WiiPages = (() => {
     return `<a class="pill primary" href="${esc(url)}"${external(url)}>Watch</a>`;
   }
 
-  function videos(data) {
+  function videos(data, user, site) {
     const list = data.videos || [];
-    if (!list.length) return empty("No videos yet.");
     return (
-      '<div class="videos">' +
-      list.map((v) => `<div class="video card"><div class="video-frame">${embed(v.url)}</div><h3>${esc(v.title)}</h3>${paras(v.note)}</div>`).join("") +
+      banner(site, "videos", { kicker: "TV", title: "Videos", sub: list.length ? count(list.length, "video") : "" }) +
+      (list.length
+        ? '<div class="videos stagger">' +
+          list.map((v) => `<div class="video card"><div class="video-frame">${embed(v.url)}</div><h3>${esc(v.title)}</h3>${paras(v.note)}</div>`).join("") +
+          "</div>"
+        : emptyState(site, "videos", "Nothing on TV yet", "Videos and clips will show up here."))
+    );
+  }
+
+  function news(data, user, site) {
+    const items = data.items || [];
+    const r = site.route("news") || {};
+    return (
+      banner(site, "news", { kicker: "Notifications", title: "What's New", sub: items.length ? count(items.length, "update") : "" }) +
+      (items.length
+        ? '<ul class="nt-list stagger">' +
+          items
+            .map(
+              (n, i) =>
+                '<li class="nt-item card">' +
+                `<span class="nt-icon">${r.icon || ""}</span>` +
+                `<span class="row-text"><span class="nt-top"><small>${date(n.date)}</small>${i === 0 ? '<span class="nt-new">New</span>' : ""}</span>` +
+                `<strong>${esc(n.title)}</strong>${paras(n.text)}</span>` +
+                "</li>"
+            )
+            .join("") +
+          "</ul>"
+        : emptyState(site, "news", "You're all caught up", "There's no news right now."))
+    );
+  }
+
+  function downloads(data, user, site) {
+    const files = data.files || [];
+    return (
+      banner(site, "downloads", { kicker: "Files", title: "Downloads", sub: files.length ? count(files.length, "file") : "" }) +
+      (files.length
+        ? '<div class="dl-grid stagger">' +
+          files
+            .map((f) => {
+              const ext = (String(f.file).split(".").pop() || "file").slice(0, 4).toUpperCase();
+              return (
+                '<div class="dl-card card">' +
+                `<span class="dl-file" style="--c:hsl(${hueOf(ext)} 70% 52%)"><b>${esc(ext)}</b></span>` +
+                `<span class="row-text"><strong>${esc(f.title)}</strong>${f.note ? `<small>${esc(f.note)}</small>` : ""}</span>` +
+                `<a class="pill primary" href="${esc(f.file)}" download>Download</a>` +
+                "</div>"
+              );
+            })
+            .join("") +
+          "</div>"
+        : emptyState(site, "downloads", "Nothing to download yet", "Files like my résumé will show up here."))
+    );
+  }
+
+  function text(data, user, site) {
+    return (
+      banner(site, "credits", { kicker: "System", sub: "How this site was made" }) +
+      `<div class="card">${paras(data.text)}</div>` +
+      '<div class="card"><h3>Built with</h3>' +
+      chips(["HTML", "CSS", "JavaScript", "No frameworks"]) +
       "</div>"
     );
-  }
-
-  function news(data) {
-    const items = data.items || [];
-    if (!items.length) return empty("No notifications.");
-    return (
-      '<ul class="list">' +
-      items
-        .map(
-          (n) =>
-            '<li class="row card news-item">' +
-            '<span class="unread" aria-hidden="true"></span>' +
-            `<span class="row-text"><small>${date(n.date)}</small><strong>${esc(n.title)}</strong>${paras(n.text)}</span>` +
-            "</li>"
-        )
-        .join("") +
-      "</ul>"
-    );
-  }
-
-  function downloads(data) {
-    const files = data.files || [];
-    if (!files.length) return empty("Nothing to download yet.");
-    return (
-      '<ul class="list">' +
-      files
-        .map((f) => {
-          const ext = (String(f.file).split(".").pop() || "file").slice(0, 4).toUpperCase();
-          return (
-            '<li class="row card">' +
-            `<span class="badge-icon file">${esc(ext)}</span>` +
-            `<span class="row-text"><strong>${esc(f.title)}</strong>${f.note ? `<small>${esc(f.note)}</small>` : ""}</span>` +
-            `<a class="pill primary" href="${esc(f.file)}" download>Download</a>` +
-            "</li>"
-          );
-        })
-        .join("") +
-      "</ul>"
-    );
-  }
-
-  function text(data) {
-    return `<div class="card">${paras(data.text)}</div>`;
   }
 
   // ---- Music: your own songs, listed in music/tracks.js and played by js/player.js ----
@@ -339,12 +464,14 @@ window.WiiPages = (() => {
   // the hobby's glyph on its colours, for the title bar and launch splash
   const hobbyBadge = (h) => `<span class="hb-badge" style="${hobbyColors(h)}">${hobbyGlyph(h)}</span>`;
 
-  // soap bubbles floating in a card's banner
-  const fizz = () =>
-    '<i class="hb-fizz" style="--x:14%;--y:62%;--s:22px;--d:0s"></i>' +
-    '<i class="hb-fizz" style="--x:78%;--y:24%;--s:30px;--d:-1.6s"></i>' +
-    '<i class="hb-fizz" style="--x:86%;--y:70%;--s:14px;--d:-2.9s"></i>' +
-    '<i class="hb-fizz" style="--x:30%;--y:18%;--s:12px;--d:-0.8s"></i>';
+  // soap bubbles floating in a banner (fewer on small cards, which come several to a page)
+  const FIZZ = [
+    "--x:78%;--y:24%;--s:30px;--d:-1.6s",
+    "--x:14%;--y:62%;--s:22px;--d:0s",
+    "--x:86%;--y:70%;--s:14px;--d:-2.9s",
+    "--x:30%;--y:18%;--s:12px;--d:-0.8s",
+  ];
+  const fizz = (n = 4) => FIZZ.slice(0, n).map((st) => `<i class="hb-fizz" style="${st}"></i>`).join("");
 
   function hobbies(data, user) {
     const items = data.items || [];
@@ -360,7 +487,7 @@ window.WiiPages = (() => {
             .map(
               (h, n) =>
                 `<a class="hb-card" href="#/${esc(h.route)}" style="${hobbyColors(h)};--n:${n}">` +
-                `<span class="hb-banner">${fizz()}<span class="hb-orb">${hobbyGlyph(h)}</span></span>` +
+                `<span class="hb-banner">${fizz(2)}<span class="hb-orb">${hobbyGlyph(h)}</span></span>` +
                 `<span class="hb-body"><strong>${esc(h.title)}</strong>${h.tagline ? `<small>${esc(h.tagline)}</small>` : ""}</span>` +
                 "</a>"
             )

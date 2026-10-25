@@ -356,13 +356,13 @@
   };
   // Pages that play their own sound, so the menu music fades out while they're open
   const QUIET = { music: true, videos: true };
-  routes.about = { title: user.name || "About Me", icon: avatarMarkup(), color: PAGE_COLORS.about, render: () => Pages.about(user) };
+  routes.about = { title: user.name || "About Me", icon: avatarMarkup(), color: PAGE_COLORS.about, render: () => Pages.about(user, site) };
   Object.keys(Pages.builtIn).forEach((name) => {
     routes[name] = {
       title: PAGE_TITLES[name] || name,
       icon: "",
       color: PAGE_COLORS[name],
-      render: () => Pages.builtIn[name]((config.pages || {})[name] || {}, user),
+      render: () => Pages.builtIn[name]((config.pages || {})[name] || {}, user, site),
     };
   });
   [...dockItems, config.cornerLeft, ...apps].forEach((item) => {
@@ -372,9 +372,20 @@
     }
   });
 
-  (function addProjects(list) {
+  // What every page can see of the rest of the site, for stats, shortcuts and "more like this"
+  const tracks = window.WIIU_TRACKS || [];
+  const site = {
+    user,
+    projects: [],
+    hobbies: ((config.pages || {}).hobbies || {}).items || [],
+    songs: tracks.length,
+    albums: new Set(tracks.map((t) => t.album)).size,
+    route: (id) => (routes[id] ? { id, title: routes[id].title, icon: routes[id].icon, color: routes[id].color } : null),
+  };
+
+  (function addProjects(list, folder) {
     list.forEach((item) => {
-      if (isFolder(item)) return addProjects(item.apps || []);
+      if (isFolder(item)) return addProjects(item.apps || [], item.title);
       if (item.url || item.page) return;
       let id = `p/${slug(item.title)}`;
       for (let n = 2; routes[id]; n++) id = `p/${slug(item.title)}-${n}`;
@@ -382,11 +393,12 @@
         title: item.title || "",
         icon: Pages.tileArt(item),
         color: item.color,
-        render: () => (item.content != null ? item.content : Pages.project(item)),
+        render: () => (item.content != null ? item.content : Pages.project(item, site, id)),
       };
       routeOf.set(item, id);
+      site.projects.push({ id, title: item.title || "", icon: routes[id].icon, folder: folder || "", game: Boolean(item.game) });
     });
-  })(apps);
+  })(apps, "");
 
   // Each hobby gets its own page at #/h/<name>
   (((config.pages || {}).hobbies || {}).items || []).forEach((h) => {
@@ -572,7 +584,7 @@
   }
 
   // Containers whose children rise one by one instead of the container as a whole
-  const RISE_GROUPS = ".project, .about, .list, .posts, .shop-grid, .videos, .music, .hobbies, .hobby";
+  const RISE_GROUPS = ".music, .hobbies, .hobby";
 
   function render(id) {
     const route = routes[id];
@@ -588,24 +600,78 @@
       if (el.matches(RISE_GROUPS)) parts.push(...el.children);
       else parts.push(el);
     });
-    parts.forEach((el, i) => {
+    // (grids that stagger their own cards don't also rise as a whole)
+    parts.filter((el) => !el.classList.contains("stagger")).forEach((el, i) => {
       el.classList.add("rise");
       el.style.setProperty("--n", Math.min(i, 8));
     });
+    // grids of cards pop in one card at a time
+    launchBody.querySelectorAll(".stagger").forEach((group) => {
+      Array.from(group.children).forEach((el, i) => el.style.setProperty("--k", Math.min(i, 12)));
+    });
     Pages.mount(launchBody);
     launchEl.dataset.route = id;
-    sky(id === "music");
+    sky(id);
     if (window.WiiPlayer) id === "music" ? WiiPlayer.mount(launchBody) : WiiPlayer.unmount();
     document.title = `${route.title} · ${user.name || "Portfolio"}`;
   }
 
-  // The Music app's Frutiger Aero sky: soap bubbles drifting up behind the content
+  // Floating bubbles behind every app's content: the Music app gets its Frutiger Aero sky,
+  // the others soft bubbles in their own theme colour, painted once as a still background
+  // (moving them costs frames while the window opens; the banners' bubbles still bob).
+  // Drawn once into a small image: cheap to repaint, unlike a pile of CSS gradients.
+  let skyTile = "";
+  function makeSkyTile() {
+    if (skyTile) return skyTile;
+    try {
+      const c = document.createElement("canvas");
+      c.width = 720;
+      c.height = 1000;
+      const g = c.getContext("2d");
+      for (let i = 0; i < 9; i++) {
+        const r = 14 + Math.random() * 38;
+        const x = r + Math.random() * (c.width - 2 * r);
+        const y = r + Math.random() * (c.height - 2 * r);
+        const rim = g.createRadialGradient(x, y, r * 0.55, x, y, r);
+        rim.addColorStop(0, "rgba(255,255,255,0)");
+        rim.addColorStop(0.72, "rgba(255,255,255,0.16)");
+        rim.addColorStop(0.95, "rgba(255,255,255,0.9)");
+        rim.addColorStop(1, "rgba(255,255,255,0)");
+        g.fillStyle = rim;
+        g.beginPath();
+        g.arc(x, y, r, 0, Math.PI * 2);
+        g.fill();
+        const gx = x - r * 0.35;
+        const gy = y - r * 0.4;
+        const glint = g.createRadialGradient(gx, gy, 0, gx, gy, r * 0.25);
+        glint.addColorStop(0, "rgba(255,255,255,0.95)");
+        glint.addColorStop(1, "rgba(255,255,255,0)");
+        g.fillStyle = glint;
+        g.beginPath();
+        g.arc(gx, gy, r * 0.25, 0, Math.PI * 2);
+        g.fill();
+      }
+      skyTile = c.toDataURL("image/png");
+    } catch (e) {}
+    return skyTile;
+  }
+  (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(makeSkyTile);
+
   let skyEl = null;
-  function sky(on) {
-    if (on && !skyEl) {
-      skyEl = document.createElement("div");
-      skyEl.className = "aero-sky";
-      skyEl.setAttribute("aria-hidden", "true");
+  function sky(id) {
+    const kind = id === "music" ? "aero-sky" : "app-sky";
+    if (skyEl && skyEl.className === kind) return;
+    if (skyEl) skyEl.remove();
+    skyEl = document.createElement("div");
+    skyEl.className = kind;
+    skyEl.setAttribute("aria-hidden", "true");
+    if (kind === "app-sky") {
+      const layer = document.createElement("i");
+      layer.className = "sky-layer";
+      const tile = makeSkyTile();
+      if (tile) layer.style.backgroundImage = `url(${tile})`;
+      skyEl.appendChild(layer);
+    } else {
       for (let i = 0; i < 18; i++) {
         const b = document.createElement("span");
         const size = 18 + Math.random() * 74;
@@ -614,11 +680,8 @@
           `--delay:${(-Math.random() * 34).toFixed(1)}s;--sway:${(Math.random() * 90 - 45).toFixed(0)}px`;
         skyEl.appendChild(b);
       }
-      launchEl.prepend(skyEl);
-    } else if (!on && skyEl) {
-      skyEl.remove();
-      skyEl = null;
     }
+    launchEl.prepend(skyEl);
   }
 
   // Moving between pages inside the window: old content slides away, new content slides in.
