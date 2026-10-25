@@ -697,43 +697,127 @@ button:focus-visible { outline: calc(var(--u) * 4) solid var(--accent); outline-
   z-index: 1;
 }
 
-/* ---- Mute button (top right) ---- */
+/* ---- Volume (top right): speaker button + background music slider ---- */
 
-.mute {
+.volume {
   position: fixed;
   top: calc(var(--u) * 41);
   right: calc(var(--u) * 38);
-  width: calc(var(--u) * 58);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 10);
   height: calc(var(--u) * 58);
+  padding: 0 calc(var(--u) * 22) 0 calc(var(--u) * 4);
   transform: translateY(-50%);
+  border-radius: 999px;
+  z-index: 9;
+}
+
+.volume.glass { border-radius: 999px; }
+.volume.glass::after { left: 8%; top: 14%; width: calc(var(--u) * 6); height: calc(var(--u) * 6); }
+
+.mute {
+  position: relative;
+  flex: 0 0 auto;
+  width: calc(var(--u) * 50);
+  height: calc(var(--u) * 50);
   border-radius: 50%;
   display: grid;
   place-items: center;
-  z-index: 9;
+  z-index: 1;
   transition: transform 0.2s var(--pop);
 }
 
-.mute.glass { border-radius: 50%; }
-.mute.glass::after { left: 18%; top: 14%; }
-.mute:active { transform: translateY(-50%) scale(0.9); }
+.mute:active { transform: scale(0.88); }
 
 .mute svg {
-  position: relative;
-  width: 56%;
-  height: 56%;
+  width: 62%;
+  height: 62%;
   fill: none;
   stroke: #6a7473;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  z-index: 1;
 }
 
 .mute .speaker { fill: #6a7473; }
-.mute .waves { stroke: var(--accent); }
+.mute .wave1,
+.mute .wave2 { stroke: var(--accent); transition: opacity 0.2s; }
 .mute .cross { display: none; stroke: #e0505a; }
-.mute.muted .waves { display: none; }
-.mute.muted .cross { display: inline; }
+.volume[data-level="1"] .wave2 { opacity: 0; }
+.volume.muted .wave1,
+.volume.muted .wave2 { display: none; }
+.volume.muted .cross { display: inline; }
+
+/* aqua gel slider */
+.vol-slider {
+  --p: 50%;
+  position: relative;
+  z-index: 1;
+  width: calc(var(--u) * 150);
+  height: calc(var(--u) * 26);
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.vol-slider:focus { outline: none; }
+.vol-slider:focus-visible { outline: calc(var(--u) * 3) solid var(--accent); outline-offset: calc(var(--u) * 4); border-radius: 999px; }
+
+.vol-slider::-webkit-slider-runnable-track {
+  height: calc(var(--u) * 10);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #c8f4ff 0%, #4cc4f4 48%, #1a8fdc 52%, #4cc8f6 100%) 0 0 / var(--p) 100% no-repeat,
+    linear-gradient(180deg, rgba(0, 50, 100, 0.22), rgba(255, 255, 255, 0.6));
+  box-shadow: inset 0 calc(var(--u) * 1.5) calc(var(--u) * 3) rgba(0, 30, 60, 0.3), 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.vol-slider::-moz-range-track {
+  height: calc(var(--u) * 10);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(0, 50, 100, 0.22), rgba(255, 255, 255, 0.6));
+  box-shadow: inset 0 calc(var(--u) * 1.5) calc(var(--u) * 3) rgba(0, 30, 60, 0.3);
+}
+
+.vol-slider::-moz-range-progress {
+  height: calc(var(--u) * 10);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #c8f4ff 0%, #4cc4f4 48%, #1a8fdc 52%, #4cc8f6 100%);
+}
+
+.vol-slider::-webkit-slider-thumb {
+  width: calc(var(--u) * 24);
+  height: calc(var(--u) * 24);
+  margin-top: calc(var(--u) * -7);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff 0 30%, #d7f3ff 55%, #8fd3f5 100%);
+  box-shadow: 0 0 0 1px rgba(20, 110, 180, 0.45), 0 calc(var(--u) * 2) calc(var(--u) * 6) rgba(0, 50, 110, 0.4);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform 0.15s var(--pop);
+}
+
+.vol-slider::-moz-range-thumb {
+  width: calc(var(--u) * 24);
+  height: calc(var(--u) * 24);
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffffff 0 30%, #d7f3ff 55%, #8fd3f5 100%);
+  box-shadow: 0 0 0 1px rgba(20, 110, 180, 0.45), 0 calc(var(--u) * 2) calc(var(--u) * 6) rgba(0, 50, 110, 0.4);
+}
+
+.vol-slider:active::-webkit-slider-thumb { transform: scale(1.15); }
+
+.volume.muted .vol-slider { filter: saturate(0.1); opacity: 0.7; }
+
+/* phones held upright: a shorter slider so it clears the page dots */
+@media (max-aspect-ratio: 1/1) {
+  .volume { right: calc(var(--u) * 24); padding-right: calc(var(--u) * 18); }
+  .vol-slider { width: calc(var(--u) * 110); }
+}
 
 /* ---- Shared page controls ---- */
 
@@ -3515,7 +3599,7 @@ body.booting .dock-item {
 }
 
 body.booting .user,
-body.booting .mute,
+body.booting .volume,
 body.booting .corner-left,
 body.booting .corner-right { animation: pop-in 0.5s var(--pop) 0.25s backwards; }
 

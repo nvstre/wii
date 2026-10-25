@@ -69,13 +69,17 @@
     <button class="corner-left" id="cornerLeft" type="button"></button>
   </main>
 
-  <button class="mute glass" id="mute" type="button" aria-label="Mute sound" aria-pressed="false">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path class="speaker" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/>
-      <path class="waves" d="M15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11"/>
-      <path class="cross" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/>
-    </svg>
-  </button>
+  <div class="volume glass" id="volume">
+    <button class="mute" id="mute" type="button" aria-label="Mute sound" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="speaker" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/>
+        <path class="wave1" d="M15 9a4 4 0 0 1 0 6"/>
+        <path class="wave2" d="M17.5 6.5a7.5 7.5 0 0 1 0 11"/>
+        <path class="cross" d="M15.5 9.5l5 5M20.5 9.5l-5 5"/>
+      </svg>
+    </button>
+    <input class="vol-slider" id="musicVolume" type="range" min="0" max="100" step="1" value="50" aria-label="Background music volume">
+  </div>
   <button class="corner-right glass" id="cornerRight" type="button"></button>
 
   <section class="tv" id="tv" aria-label="TV screen" hidden>

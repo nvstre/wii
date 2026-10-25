@@ -58,7 +58,7 @@ Optional: add your own domain on the same Pages settings screen.
 - Click/tap a tile to select it, again to open it
 - Arrow keys to move, Enter to open, Esc to go back
 - Swipe, scroll wheel, side arrows or page dots to change pages
-- Speaker button (top right) mutes music and sounds
+- Top right: the slider sets the background music volume, the speaker button mutes all sound
 
 ## Credits
 

@@ -82,7 +82,14 @@
     let musicStarted = false;
     let musicGain = null;
     let ducked = false;
-    const musicVolume = () => (music && music.volume != null ? music.volume : 0.35);
+    // The volume slider's level (0 to 1); halfway is the volume set in the config.
+    let level = 0.5;
+    try {
+      const saved = parseFloat(localStorage.getItem("wiiu-music-level"));
+      if (saved >= 0 && saved <= 1) level = saved;
+    } catch (e) {}
+    const baseVolume = () => (music && music.volume != null ? music.volume : 0.35);
+    const musicVolume = () => level * Math.min(1, baseVolume() * 2);
 
     async function startMusic() {
       if (musicStarted || !music) return;
@@ -129,6 +136,19 @@
         if (musicGain) {
           musicGain.gain.cancelScheduledValues(ctx.currentTime);
           musicGain.gain.setTargetAtTime(on ? 0 : musicVolume(), ctx.currentTime, 0.3);
+        }
+      },
+      get level() {
+        return level;
+      },
+      setLevel(v) {
+        level = Math.max(0, Math.min(1, v));
+        try {
+          localStorage.setItem("wiiu-music-level", String(level));
+        } catch (e) {}
+        if (musicGain && !ducked) {
+          musicGain.gain.cancelScheduledValues(ctx.currentTime);
+          musicGain.gain.setTargetAtTime(musicVolume(), ctx.currentTime, 0.05);
         }
       },
       setMuted(on) {
@@ -912,20 +932,36 @@
 
   $("tvMenu").addEventListener("click", hideTv);
 
-  // ---- Mute ----
+  // ---- Volume: the slider sets the background music, the speaker mutes everything ----
 
+  const volumeEl = $("volume");
   const muteBtn = $("mute");
-  const paintMute = () => {
-    muteBtn.classList.toggle("muted", audio.muted);
+  const slider = $("musicVolume");
+  slider.value = String(Math.round(audio.level * 100));
+  const paintVolume = () => {
+    const v = Number(slider.value);
+    const silent = audio.muted || v === 0;
+    volumeEl.classList.toggle("muted", silent);
+    volumeEl.dataset.level = silent ? "0" : v < 50 ? "1" : "2";
+    slider.style.setProperty("--p", `${v}%`);
+    slider.setAttribute("aria-valuetext", `${v}%`);
     muteBtn.setAttribute("aria-pressed", String(audio.muted));
     muteBtn.setAttribute("aria-label", audio.muted ? "Unmute sound" : "Mute sound");
   };
   muteBtn.addEventListener("click", () => {
     audio.setMuted(!audio.muted);
-    paintMute();
+    paintVolume();
     sfx.select();
   });
-  paintMute();
+  slider.addEventListener("input", () => {
+    if (audio.muted) audio.setMuted(false);
+    audio.setLevel(Number(slider.value) / 100);
+    paintVolume();
+  });
+  slider.addEventListener("change", () => sfx.move());
+  // arrow keys on the slider move the volume, not the menu selection
+  slider.addEventListener("keydown", (e) => e.stopPropagation());
+  paintVolume();
 
   // ---- Input ----
 
