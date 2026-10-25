@@ -74,12 +74,7 @@ window.WIIU_CONFIG = {
       ],
     },
     { title: "Music", icon: "img/music-app.svg", page: "music" },
-    {
-      title: "Featured Project", label: "★", color: "#14bfd6", year: "2025", role: "Solo project",
-      description: "Placeholder: your best project gets its own tile on the front page.",
-      tech: ["HTML", "CSS", "JavaScript"],
-      links: [{ label: "Source code", url: "https://github.com" }],
-    },
+    { title: "Hobbies", icon: "img/hobbies-app.svg", page: "hobbies" },
     // ---- Wii U games ----
     {
       title: "Mario Kart 8", game: true, icon: "img/games/mario-kart-8-icon.jpg", label: "Mario\nKart 8", color: "#e4262a", color2: "#8f0f14",
@@ -112,6 +107,38 @@ window.WIIU_CONFIG = {
   cornerRight: { title: "Switch Screens",  glyph: "swap", action: "tv" },
 
   pages: {
+    // Hobbies app. Each hobby gets its own page.
+    //   glyph: game, music, code, camera, ball, book, art, travel, star  (or emoji: "🛹", or icon: "img/x.png")
+    //   color + color2: the hobby's colours
+    //   favorites: a short list of favourite things
+    //   related: other pages on this site, like "p/mario-kart-8" or "music"
+    //   links: [{ label, url }], images: ["img/..."]
+    hobbies: {
+      intro: "Placeholder: a sentence about what you get up to when you're not building things.",
+      items: [
+        {
+          title: "Gaming", glyph: "game", color: "#ff4d55", color2: "#7316ff",
+          tagline: "Placeholder: Mario Kart, Splatoon and late-night online matches",
+          description: "Placeholder: what you play, how long you've been gaming and what you love about it.",
+          favorites: ["Mario Kart 8", "Splatoon"],
+          related: ["p/mario-kart-8", "p/splatoon"],
+        },
+        {
+          title: "Music", glyph: "music", color: "#1aa7ec", color2: "#2fbf5a",
+          tagline: "Placeholder: Yeat on repeat",
+          description: "Placeholder: what you listen to, and when.",
+          favorites: ["Yeat", "Luh Leakyz Vol. 1"],
+          related: ["music"],
+        },
+        {
+          title: "Coding", glyph: "code", color: "#2a5bd7", color2: "#14bfd6",
+          tagline: "Placeholder: building websites and tools for fun",
+          description: "Placeholder: how you got into programming and what you like to build.",
+          favorites: ["JavaScript", "Web design"],
+          related: ["p/leonidalink", "p/utopiarpg", "p/gdmp"],
+        },
+      ],
+    },
     // Music app: plays the songs you put in the music/ folder (see music/README.md).
     // "albums" are only used for covers: `npm run covers` fetches them from Wikipedia,
     // and songs from those albums without their own artwork use them.

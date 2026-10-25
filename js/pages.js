@@ -314,7 +314,91 @@ window.WiiPages = (() => {
     );
   }
 
-  const builtIn = { contact, blog, services, links, videos, news, downloads, music, credits: text };
+  // ---- Hobbies ----
+
+  const HOBBY_GLYPHS = {
+    game: '<path fill-rule="evenodd" d="M7 7h10a5 5 0 0 1 4.9 6l-.8 4a2.6 2.6 0 0 1-4.5 1.2L14.8 16H9.2l-1.8 2.2A2.6 2.6 0 0 1 2.9 17l-.8-4A5 5 0 0 1 7 7zm0 3v1.5H5.5V13H7v1.5h1.5V13H10v-1.5H8.5V10zm8.8.2a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>',
+    music: '<path d="M9 5.5 20 3v12.2a3 3 0 1 1-2-2.8V7.3l-7 1.6v8.3a3 3 0 1 1-2-2.8z"/>',
+    code: '<path d="M8 7 3 12l5 5M16 7l5 5-5 5M13.5 4.5l-3 15" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+    camera: '<path fill-rule="evenodd" d="M8.5 5h7l1.5 2H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3zM12 9a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>',
+    ball: '<circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M12 7.3l3.9 2.8-1.5 4.6H9.6l-1.5-4.6z"/>',
+    book: '<path fill-rule="evenodd" d="M3 5h6.5A3 3 0 0 1 12 6.3 3 3 0 0 1 14.5 5H21v13h-6.5a2.5 2.5 0 0 0-2.5 1.5A2.5 2.5 0 0 0 9.5 18H3zm8 3a1.5 1.5 0 0 0-1.5-1H5v9h4.5c.5 0 1 .1 1.5.3zm2 0v8.3c.5-.2 1-.3 1.5-.3H19V7h-4.5A1.5 1.5 0 0 0 13 8z"/>',
+    art: '<path fill-rule="evenodd" d="M12 3a9 9 0 0 0 0 18c1.4 0 2-1 2-2 0-1.4-1-1.6-1-2.8 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3zM7.5 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm4.5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>',
+    travel: '<path d="M21 15.5v-2L13.5 9V4.2a1.5 1.5 0 0 0-3 0V9L3 13.5v2l7.5-2.3v4.6L8.5 19.3V21l3.5-1 3.5 1v-1.7l-2-1.5v-4.6z"/>',
+    star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+  };
+
+  const hobbyColors = (h) => `--c:${esc(h.color || "#ff7a3d")};--c2:${esc(h.color2 || h.color || "#ff3d77")}`;
+
+  const hobbyGlyph = (h) => {
+    if (h.icon) return `<img src="${esc(h.icon)}" alt="" draggable="false">`;
+    if (h.emoji) return `<span class="hb-emoji">${esc(h.emoji)}</span>`;
+    return `<svg viewBox="0 0 24 24" aria-hidden="true">${HOBBY_GLYPHS[h.glyph] || HOBBY_GLYPHS.star}</svg>`;
+  };
+
+  // the hobby's glyph on its colours, for the title bar and launch splash
+  const hobbyBadge = (h) => `<span class="hb-badge" style="${hobbyColors(h)}">${hobbyGlyph(h)}</span>`;
+
+  // soap bubbles floating in a card's banner
+  const fizz = () =>
+    '<i class="hb-fizz" style="--x:14%;--y:62%;--s:22px;--d:0s"></i>' +
+    '<i class="hb-fizz" style="--x:78%;--y:24%;--s:30px;--d:-1.6s"></i>' +
+    '<i class="hb-fizz" style="--x:86%;--y:70%;--s:14px;--d:-2.9s"></i>' +
+    '<i class="hb-fizz" style="--x:30%;--y:18%;--s:12px;--d:-0.8s"></i>';
+
+  function hobbies(data, user) {
+    const items = data.items || [];
+    return (
+      '<section class="hobbies">' +
+      '<div class="hb-intro card">' +
+      `<div class="mii-frame">${avatar(user)}</div>` +
+      `<div class="row-text"><small>${esc(user.name || "")}</small><h2>My Hobbies</h2>${data.intro ? paras(data.intro) : ""}</div>` +
+      "</div>" +
+      (items.length
+        ? '<div class="hb-grid">' +
+          items
+            .map(
+              (h, n) =>
+                `<a class="hb-card" href="#/${esc(h.route)}" style="${hobbyColors(h)};--n:${n}">` +
+                `<span class="hb-banner">${fizz()}<span class="hb-orb">${hobbyGlyph(h)}</span></span>` +
+                `<span class="hb-body"><strong>${esc(h.title)}</strong>${h.tagline ? `<small>${esc(h.tagline)}</small>` : ""}</span>` +
+                "</a>"
+            )
+            .join("") +
+          "</div>"
+        : empty("No hobbies added yet."))
+      + "</section>"
+    );
+  }
+
+  function hobby(h, related) {
+    const favs = h.favorites || [];
+    const images = h.images || [];
+    return (
+      `<article class="hobby" style="${hobbyColors(h)}">` +
+      `<header class="hb-hero">${fizz()}<span class="hb-orb big">${hobbyGlyph(h)}</span>` +
+      `<div class="hb-hero-text"><small>Hobby</small><h2>${esc(h.title)}</h2>${h.tagline ? `<p>${esc(h.tagline)}</p>` : ""}` +
+      (h.since ? `<span class="hb-since">Since ${esc(h.since)}</span>` : "") +
+      "</div></header>" +
+      '<div class="hb-cols">' +
+      `<div class="card">${paras(h.description) || '<p class="meta">Nothing written yet.</p>'}` +
+      (h.links && h.links.length ? `<div class="actions">${h.links.map((l, i) => button(l, i === 0)).join("")}</div>` : "") +
+      "</div>" +
+      (favs.length ? `<div class="card hb-favs"><h3>Favourites</h3><ul>${favs.map((f) => `<li>${esc(f)}</li>`).join("")}</ul></div>` : "") +
+      "</div>" +
+      (related.length
+        ? '<div class="card"><h3>On this site</h3><div class="hb-related">' +
+          related.map((r) => `<a class="hb-rel" href="#/${esc(r.id)}"><span class="hb-rel-art">${r.icon}</span><strong>${esc(r.title)}</strong></a>`).join("") +
+          "</div></div>"
+        : "") +
+      (images.length
+        ? `<div class="gallery">${images.map((src) => `<a class="card" href="${esc(src)}" target="_blank" rel="noopener"><img src="${esc(src)}" alt="" loading="lazy"></a>`).join("")}</div>`
+        : "") +
+      "</article>"
+    );
+  }
+
+  const builtIn = { contact, blog, services, links, videos, news, downloads, music, hobbies, credits: text };
 
   // Wire up the bits of a rendered page that need behaviour.
   function mount(root) {
@@ -342,5 +426,5 @@ window.WiiPages = (() => {
     });
   }
 
-  return { esc, project, about, builtIn, mount, tileArt, coverArt, icon };
+  return { esc, project, about, builtIn, mount, tileArt, coverArt, icon, hobby, hobbyBadge };
 })();

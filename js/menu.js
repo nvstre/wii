@@ -342,7 +342,7 @@
 
   const PAGE_TITLES = {
     contact: "Contact", blog: "Blog", services: "Services", links: "Links",
-    videos: "Videos", news: "News", downloads: "Downloads", credits: "About This Site", music: "Music",
+    videos: "Videos", news: "News", downloads: "Downloads", credits: "About This Site", music: "Music", hobbies: "Hobbies",
   };
   const routes = {};
   const routeOf = new Map();
@@ -352,7 +352,7 @@
   // Each app window takes a theme colour, like the console's own apps
   const PAGE_COLORS = {
     about: "#14bfd6", contact: "#f28c26", blog: "#4cb51c", services: "#f39a12", links: "#2c74e8",
-    videos: "#e3202b", news: "#14b3c7", downloads: "#1f86e8", credits: "#7b8786", music: "#1aa7ec",
+    videos: "#e3202b", news: "#14b3c7", downloads: "#1f86e8", credits: "#7b8786", music: "#1aa7ec", hobbies: "#ff7a3d",
   };
   // Pages that play their own sound, so the menu music fades out while they're open
   const QUIET = { music: true, videos: true };
@@ -387,6 +387,23 @@
       routeOf.set(item, id);
     });
   })(apps);
+
+  // Each hobby gets its own page at #/h/<name>
+  (((config.pages || {}).hobbies || {}).items || []).forEach((h) => {
+    let id = `h/${slug(h.title)}`;
+    for (let n = 2; routes[id]; n++) id = `h/${slug(h.title)}-${n}`;
+    h.route = id;
+    routes[id] = {
+      title: h.title || "",
+      icon: Pages.hobbyBadge(h),
+      color: h.color,
+      render: () =>
+        Pages.hobby(
+          h,
+          (h.related || []).filter((r) => routes[r]).map((r) => ({ id: r, title: routes[r].title, icon: routes[r].icon }))
+        ),
+    };
+  });
 
   // ---- Build ----
 
@@ -555,7 +572,7 @@
   }
 
   // Containers whose children rise one by one instead of the container as a whole
-  const RISE_GROUPS = ".project, .about, .list, .posts, .shop-grid, .videos, .music";
+  const RISE_GROUPS = ".project, .about, .list, .posts, .shop-grid, .videos, .music, .hobbies, .hobby";
 
   function render(id) {
     const route = routes[id];

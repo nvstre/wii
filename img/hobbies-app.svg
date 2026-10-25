@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#ffc24d"/>
+      <stop offset="0.55" stop-color="#ff7a3d"/>
+      <stop offset="1" stop-color="#ff3d77"/>
+    </linearGradient>
+    <linearGradient id="heart" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffe3ea"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" fill="url(#bg)"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="1.6">
+    <circle cx="22" cy="96" r="9"/>
+    <circle cx="104" cy="24" r="6"/>
+    <circle cx="110" cy="92" r="4"/>
+  </g>
+  <path d="M64 104 C 22 76, 18 40, 44 34 C 54 32, 61 38, 64 46 C 67 38, 74 32, 84 34 C 110 40, 106 76, 64 104 Z" fill="#b8204f" opacity="0.35" transform="translate(0 4)"/>
+  <path d="M64 104 C 22 76, 18 40, 44 34 C 54 32, 61 38, 64 46 C 67 38, 74 32, 84 34 C 110 40, 106 76, 64 104 Z" fill="url(#heart)"/>
+  <path d="M34 50 C 34 40, 42 37, 48 38 C 54 39, 58 44, 58 48 C 50 46, 42 48, 34 56 Z" fill="#ffffff" opacity="0.9"/>
+  <path d="M28 18 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3 z" fill="#ffffff"/>
+  <path d="M98 50 l2 4.5 4.5 2 -4.5 2 -2 4.5 -2 -4.5 -4.5 -2 4.5 -2 z" fill="#ffffff"/>
+  <rect width="128" height="60" fill="url(#gloss)"/>
+</svg>

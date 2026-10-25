@@ -26,6 +26,7 @@ Everything lives in `js/config.js`. Anything marked "Placeholder" is yours to re
 | Grid tiles | Projects, links | `apps` |
 | Folder tiles | Groups of projects (add an `apps` list) | `apps` |
 | Music tile | Music app playing your songs from `music/` | `pages.music`, `music/` |
+| Hobbies tile | Hobbies app, one page per hobby | `pages.hobbies` |
 | Friend List | Contact / socials | `pages.contact` |
 | Community | Blog / dev log | `pages.blog` |
 | Shop | Services | `pages.services` |
